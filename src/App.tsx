@@ -8,13 +8,17 @@ import { useAudioPlayer } from './hooks/useAudioPlayer'
 import { useScalePlayer } from './hooks/useScalePlayer'
 import { useChordPlayer } from './hooks/useChordPlayer'
 import type { ChordMode } from './hooks/useChordPlayer'
+import { useFxPlayer } from './hooks/useFxPlayer'
 import { CHORDS } from './data/chords'
 import type { Chord } from './data/chords'
+import { FX_LIST, FX_PREVIEW_SAMPLES } from './data/fx'
+import type { FxDefinition } from './data/fx'
 import { Topbar } from './components/Topbar'
 import { Sidebar } from './components/Sidebar'
 import { SampleGrid } from './components/SampleGrid'
 import { ScalesTab } from './components/ScalesTab'
 import { ChordsTab } from './components/ChordsTab'
+import { FxTab } from './components/FxTab'
 import { BottomPanel } from './components/BottomPanel'
 
 interface AppState {
@@ -39,6 +43,13 @@ interface AppState {
   scaleRootNote: string
   scaleOctave: number
   scalesSearch: string
+  // FX tab
+  selectedFx: string | null
+  fxSample: string
+  fxParams: Record<string, number>
+  fxMix: number
+  fxAmp: number
+  fxSearch: string
 }
 
 const INITIAL_STATE: AppState = {
@@ -60,9 +71,49 @@ const INITIAL_STATE: AppState = {
   scaleRootNote: 'C',
   scaleOctave: 4,
   scalesSearch: '',
+  selectedFx: null,
+  fxSample: FX_PREVIEW_SAMPLES[0]?.value ?? 'loop_amen',
+  fxParams: {},
+  fxMix: 1.0,
+  fxAmp: 1.0,
+  fxSearch: '',
 }
 
 const GRID_COL_ESTIMATE = 6
+
+// Build default params for a given FX definition
+function defaultFxParams(fxDef: FxDefinition): Record<string, number> {
+  const result: Record<string, number> = {}
+  for (const p of fxDef.params) {
+    result[p.key] = p.default
+  }
+  return result
+}
+
+// Build code snippet for the FX tab — only non-default params included
+function buildFxSnippet(
+  fxKey: string | null,
+  sampleName: string,
+  params: Record<string, number>,
+): string {
+  if (!fxKey) return 'no fx selected'
+  const fxDef = FX_LIST.find((f) => f.key === fxKey)
+  if (!fxDef) return 'no fx selected'
+
+  const nonDefault = fxDef.params
+    .filter((p) => {
+      const val = params[p.key] ?? p.default
+      return Math.abs(val - p.default) >= p.step
+    })
+    .map((p) => {
+      const val = params[p.key] ?? p.default
+      const formatted = p.step < 1 ? val.toFixed(2) : String(Math.round(val))
+      return `${p.key}: ${formatted}`
+    })
+
+  const paramStr = nonDefault.length > 0 ? `, ${nonDefault.join(', ')}` : ''
+  return `with_fx :${fxKey}${paramStr} do\n  sample :${sampleName}\nend`
+}
 
 function App() {
   const [state, setState] = useState<AppState>(INITIAL_STATE)
@@ -90,6 +141,24 @@ function App() {
       state.chordAmp,
     )
 
+  // ── FX player ────────────────────────────────────────────
+  const fxPlayer = useFxPlayer(
+    state.fxSample,
+    state.selectedFx ?? 'reverb',
+    state.fxParams,
+    state.fxMix,
+    state.fxAmp,
+  )
+
+  // Stop FX playback when switching away from the FX tab
+  const prevTabRef = useRef(state.activeTab)
+  useEffect(() => {
+    if (prevTabRef.current === 'fx' && state.activeTab !== 'fx') {
+      fxPlayer.stop()
+    }
+    prevTabRef.current = state.activeTab
+  }, [state.activeTab, fxPlayer])
+
   // ── Derived data ────────────────────────────────────────
   const filteredSamples = useMemo<Sample[]>(() => {
     const q = state.search.trim().toLowerCase()
@@ -109,6 +178,12 @@ function App() {
     return CHORDS
   }, [state.chordsSearch])
 
+  const filteredFx = useMemo<FxDefinition[]>(() => {
+    const q = state.fxSearch.trim().toLowerCase()
+    if (q) return FX_LIST.filter((f) => f.name.toLowerCase().includes(q) || f.key.includes(q))
+    return FX_LIST
+  }, [state.fxSearch])
+
   // ── Snippets ────────────────────────────────────────────
   const samplesSnippet = state.selectedSample
     ? `sample :${state.selectedSample}, rate: ${state.rate.toFixed(2)}, amp: ${state.amp.toFixed(2)}`
@@ -122,15 +197,7 @@ function App() {
     ? `chord :${state.chordRootNote}, :${state.selectedChord}`
     : 'no chord selected'
 
-  // Always-current ref so handleCopy reads the latest snippet without
-  // needing snippet strings in its useCallback dep array.
-  const activeSnippetRef = useRef(samplesSnippet)
-  activeSnippetRef.current =
-    state.activeTab === 'samples'
-      ? samplesSnippet
-      : state.activeTab === 'chords'
-        ? chordsSnippet
-        : scalesSnippet
+  const fxSnippet = buildFxSnippet(state.selectedFx, state.fxSample, state.fxParams)
 
   // ── Handlers ────────────────────────────────────────────
   const handleSampleClick = useCallback(
@@ -172,6 +239,7 @@ function App() {
     setState((s) => {
       if (s.activeTab === 'samples') return { ...s, search: v }
       if (s.activeTab === 'chords') return { ...s, chordsSearch: v }
+      if (s.activeTab === 'fx') return { ...s, fxSearch: v }
       return { ...s, scalesSearch: v }
     })
   }, [])
@@ -221,6 +289,7 @@ function App() {
     setState((s) => {
       if (s.activeTab === 'samples') return { ...s, amp }
       if (s.activeTab === 'chords') return { ...s, chordAmp: amp }
+      if (s.activeTab === 'fx') return { ...s, fxAmp: amp }
       return { ...s, scaleAmp: amp }
     })
   }, [])
@@ -231,14 +300,52 @@ function App() {
         ? !!state.selectedSample
         : state.activeTab === 'chords'
           ? !!state.selectedChord
-          : !!state.selectedScale
-    if (hasSelection) void navigator.clipboard.writeText(activeSnippetRef.current)
-  }, [state.activeTab, state.selectedSample, state.selectedChord, state.selectedScale])
+          : state.activeTab === 'fx'
+            ? !!state.selectedFx
+            : !!state.selectedScale
+    if (hasSelection) {
+      const snippet =
+        state.activeTab === 'samples'
+          ? samplesSnippet
+          : state.activeTab === 'chords'
+            ? chordsSnippet
+            : state.activeTab === 'fx'
+              ? fxSnippet
+              : scalesSnippet
+      void navigator.clipboard.writeText(snippet)
+    }
+  }, [state.activeTab, state.selectedSample, state.selectedChord, state.selectedScale, state.selectedFx, samplesSnippet, chordsSnippet, scalesSnippet, fxSnippet])
+
+  // ── FX-specific handlers ─────────────────────────────────
+  const handleFxClick = useCallback((key: string) => {
+    setState((s) => {
+      if (s.selectedFx === key) return s
+      const fxDef = FX_LIST.find((f) => f.key === key)
+      const newParams = fxDef ? defaultFxParams(fxDef) : {}
+      return { ...s, selectedFx: key, fxParams: newParams }
+    })
+  }, [])
+
+  const handleFxSampleChange = useCallback((value: string) => {
+    setState((s) => ({ ...s, fxSample: value }))
+  }, [])
+
+  const handleFxParamChange = useCallback((key: string, value: number) => {
+    setState((s) => ({ ...s, fxParams: { ...s.fxParams, [key]: value } }))
+  }, [])
+
+  const handleFxMixChange = useCallback((value: number) => {
+    setState((s) => ({ ...s, fxMix: value }))
+  }, [])
+
+  const handleFxAmpChange = useCallback((value: number) => {
+    setState((s) => ({ ...s, fxAmp: value }))
+  }, [])
 
   // ── Keyboard shortcuts ──────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return
 
       if (state.activeTab === 'samples') {
         const idx = state.selectedSample
@@ -303,6 +410,27 @@ function App() {
           case 'ArrowUp':    e.preventDefault(); navigate(-GRID_COL_ESTIMATE); break
           case 'c': case 'C': handleCopy(); break
         }
+      } else if (state.activeTab === 'fx') {
+        const idx = state.selectedFx
+          ? filteredFx.findIndex((f) => f.key === state.selectedFx)
+          : -1
+        const navigate = (delta: number) => {
+          const next = filteredFx[idx + delta]
+          if (next) handleFxClick(next.key)
+        }
+        switch (e.key) {
+          case ' ':
+            e.preventDefault()
+            if (state.selectedFx) {
+              if (fxPlayer.isPlaying) fxPlayer.stop(); else void fxPlayer.play()
+            }
+            break
+          case 'ArrowRight': e.preventDefault(); navigate(1); break
+          case 'ArrowLeft':  e.preventDefault(); navigate(-1); break
+          case 'ArrowDown':  e.preventDefault(); navigate(GRID_COL_ESTIMATE); break
+          case 'ArrowUp':    e.preventDefault(); navigate(-GRID_COL_ESTIMATE); break
+          case 'c': case 'C': handleCopy(); break
+        }
       }
     }
 
@@ -310,38 +438,48 @@ function App() {
     return () => document.removeEventListener('keydown', handler)
   }, [
     state.activeTab,
-    state.selectedSample, state.selectedChord, state.selectedScale,
-    filteredSamples, filteredChords, filteredScales,
-    samplePlaying, chordPlaying, scalePlaying,
+    state.selectedSample, state.selectedChord, state.selectedScale, state.selectedFx,
+    filteredSamples, filteredChords, filteredScales, filteredFx,
+    samplePlaying, chordPlaying, scalePlaying, fxPlayer,
     samplePlay, sampleStop, chordPlay, chordStop, scalePlay, scaleStop,
+    handleCopy, handleFxClick,
   ])
 
   const isSamplesTab = state.activeTab === 'samples'
   const isChordsTab = state.activeTab === 'chords'
+  const isFxTab = state.activeTab === 'fx'
 
   const activeSearch = isSamplesTab
     ? state.search
     : isChordsTab
       ? state.chordsSearch
-      : state.scalesSearch
+      : isFxTab
+        ? state.fxSearch
+        : state.scalesSearch
 
   const activeSnippet = isSamplesTab
     ? samplesSnippet
     : isChordsTab
       ? chordsSnippet
-      : scalesSnippet
+      : isFxTab
+        ? fxSnippet
+        : scalesSnippet
 
   const activeHasSelection = isSamplesTab
     ? !!state.selectedSample
     : isChordsTab
       ? !!state.selectedChord
-      : !!state.selectedScale
+      : isFxTab
+        ? !!state.selectedFx
+        : !!state.selectedScale
 
   const activeAmp = isSamplesTab
     ? state.amp
     : isChordsTab
       ? state.chordAmp
-      : state.scaleAmp
+      : isFxTab
+        ? state.fxAmp
+        : state.scaleAmp
 
   return (
     <div className="app">
@@ -382,6 +520,24 @@ function App() {
             onNumOctavesChange={handleChordNumOctavesChange}
             onModeChange={handleChordModeChange}
           />
+        ) : isFxTab ? (
+          <FxTab
+            filteredFx={filteredFx}
+            selectedFx={state.selectedFx}
+            selectedSample={state.fxSample}
+            params={state.fxParams}
+            mix={state.fxMix}
+            amp={state.fxAmp}
+            isPlaying={fxPlayer.isPlaying}
+            player={fxPlayer}
+            snippet={fxSnippet}
+            onFxClick={handleFxClick}
+            onSampleChange={handleFxSampleChange}
+            onParamChange={handleFxParamChange}
+            onMixChange={handleFxMixChange}
+            onAmpChange={handleFxAmpChange}
+            onCopy={handleCopy}
+          />
         ) : (
           <ScalesTab
             scales={filteredScales}
@@ -396,16 +552,18 @@ function App() {
         )}
       </div>
 
-      <BottomPanel
-        showRate={isSamplesTab}
-        rate={state.rate}
-        onRateChange={handleRateChange}
-        amp={activeAmp}
-        onAmpChange={handleAmpChange}
-        snippet={activeSnippet}
-        hasSelection={activeHasSelection}
-        onCopy={handleCopy}
-      />
+      {!isFxTab && (
+        <BottomPanel
+          showRate={isSamplesTab}
+          rate={state.rate}
+          onRateChange={handleRateChange}
+          amp={activeAmp}
+          onAmpChange={handleAmpChange}
+          snippet={activeSnippet}
+          hasSelection={activeHasSelection}
+          onCopy={handleCopy}
+        />
+      )}
     </div>
   )
 }

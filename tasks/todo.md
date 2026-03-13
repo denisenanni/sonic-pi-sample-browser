@@ -164,3 +164,31 @@
 - `src/App.tsx` — `AppState` expanded with 6 chord fields; `useChordPlayer` wired; `filteredChords` memo; `handleChordClick` and 4 chord control handlers added; keyboard handler extended for chords tab; `handleSearchChange`, `handleAmpChange`, `handleCopy` updated for 3-tab branching; JSX updated with ternary for three content areas.
 
 **Build:** `yarn build` passes with no TypeScript errors.
+
+---
+
+## Task 07 — FX Tab
+
+### Plan
+
+- [x] 1. Create `src/data/fx.ts` — `FxParam`, `FxDefinition`, `FX_LIST` (all 35 FX), `FX_PREVIEW_SAMPLES` (12–15 curated samples)
+- [x] 2. Create `src/hooks/useFxPlayer.ts` — looped sample through Tone.js FX chain; `play()`, `stop()`, `isPlaying`; live param updates; FX/sample hot-swap without stopping; cleanup on unmount; no `any`
+- [x] 3. Create `src/components/FxTab.tsx` — top controls row (sample dropdown + play/stop), FX grid, bottom panel with Mix/Amp sliders + per-FX param sliders + live code snippet + copy button; search filter
+- [x] 4. Update `src/types.ts` — add `'fx'` to `ActiveTab`
+- [x] 5. Update `src/components/Topbar.tsx` — add FX tab (order: Samples | Chords | Scales | FX)
+- [x] 6. Update `src/App.tsx` — add FX state fields, wire `useFxPlayer`, keyboard shortcuts, stop playback on tab switch, conditional rendering; extend `handleSearchChange`, `handleAmpChange`, `handleCopy`
+- [x] 7. Verify build passes with no TypeScript errors
+
+### Review
+
+**Files created/modified:**
+
+- `src/data/fx.ts` — `FxParam`, `FxDefinition`, `FX_LIST` (34 FX covering all entries in the mapping table), `FX_PREVIEW_SAMPLES` (14 curated samples across drums, bass, melodic, texture). No `any`.
+- `src/hooks/useFxPlayer.ts` — `useFxPlayer` hook; builds a Tone.js FX node per `fxKey` via `buildEffect()`; hot-swaps effect on `fxKey` change (dispose old, wire new) without stopping the player; updates params in-place via `updateEffect()` on every param/mix change; separate `useEffect` for amp updates; full cleanup on unmount. Uses `Tone.Freeverb` (has `roomSize`) for reverb/gverb; `Tone.FeedbackDelay` for echo; `Tone.BitCrusher` with `wet` set post-construction; `Tone.Filter` for all filter types (insert, no wet blend); `Tone.Tremolo`/`AutoFilter`/`AutoPanner`/`Chorus`/`PitchShift`/`Distortion`/`Compressor`/`Limiter`/`Volume`/`Panner`/`EQ3` for all others. No `any`.
+- `src/components/FxTab.tsx` — self-contained tab: sample dropdown + play/stop row, FX grid (same `.sample-cell` CSS), bottom panel with Mix/Amp + dynamic per-FX sliders + live code snippet + copy button. Receives `filteredFx` and all handlers from App.
+- `src/index.css` — added `.fx-tab`, `.fx-top-controls`, `.fx-sample-row`, `.fx-sample-select`, `.fx-play-btn`, `.fx-grid-container`, `.fx-cell`, `.fx-bottom-panel`, `.fx-controls` styles.
+- `src/types.ts` — `ActiveTab` now includes `'fx'`.
+- `src/components/Topbar.tsx` — FX tab button added (Samples | Chords | Scales | FX | Synths).
+- `src/App.tsx` — `AppState` extended with `selectedFx`, `fxSample`, `fxParams`, `fxMix`, `fxAmp`, `fxSearch`; `useFxPlayer` wired; tab-switch effect stops FX playback; `filteredFx` memo; `handleFxClick` resets params to defaults on FX change; keyboard shortcuts extended for FX tab; `handleSearchChange`/`handleAmpChange`/`handleCopy` updated for 4-tab branching; `BottomPanel` hidden on FX tab (FxTab has its own). All other tabs unaffected.
+
+**Build:** `yarn build` passes with no TypeScript errors.

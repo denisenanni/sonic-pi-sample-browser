@@ -31,6 +31,12 @@ export function Topbar({ activeTab, onTabChange, search, onSearchChange }: Topba
         >
           Scales
         </button>
+        <button
+          className={`tab${activeTab === 'fx' ? ' active' : ''}`}
+          onClick={() => onTabChange('fx')}
+        >
+          FX
+        </button>
         <button className="tab" disabled>
           Synths
         </button>
