@@ -1,4 +1,4 @@
-type ActiveTab = 'samples' | 'scales' | 'synths'
+import type { ActiveTab } from '../types'
 
 interface TopbarProps {
   activeTab: ActiveTab

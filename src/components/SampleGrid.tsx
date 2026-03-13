@@ -23,14 +23,16 @@ export function SampleGrid({ samples, selectedSample, isPlaying, onSampleClick }
             .join(' ')
 
           return (
-            <div
+            <button
               key={sample.name}
               className={cellClass}
               onClick={() => onSampleClick(sample.name)}
+              aria-label={`Play ${sample.name}${isThisPlaying ? ', currently playing' : ''}`}
+              aria-pressed={isSelected}
             >
               <span className="sample-name">:{sample.name}</span>
               <span className="play-icon">{isThisPlaying ? '■' : '▶'}</span>
-            </div>
+            </button>
           )
         })}
       </div>

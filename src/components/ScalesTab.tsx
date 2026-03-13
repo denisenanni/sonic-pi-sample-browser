@@ -66,17 +66,19 @@ export function ScalesTab({
             .join(' ')
 
           return (
-            <div
+            <button
               key={scale.name}
               className={cellClass}
               onClick={() => onScaleClick(scale.name)}
+              aria-label={`Play ${scale.name}${isThisPlaying ? ', currently playing' : ''}`}
+              aria-pressed={isSelected}
             >
               <div className="sample-name-col">
                 <span className="sample-name">:{scale.name}</span>
                 <span className="scale-note-count">{scale.steps.length + 1} notes</span>
               </div>
               <span className="play-icon">{isThisPlaying ? '■' : '▶'}</span>
-            </div>
+            </button>
           )
         })}
       </div>

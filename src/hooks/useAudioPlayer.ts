@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Player, gainToDb, start as toneStart } from 'tone'
 
 export interface AudioPlayerControls {
@@ -63,7 +63,7 @@ export function useAudioPlayer(
     }
   }, [sampleName])
 
-  const play = async (): Promise<void> => {
+  const play = useCallback(async (): Promise<void> => {
     const player = playerRef.current
     if (!player) return
 
@@ -79,19 +79,19 @@ export function useAudioPlayer(
       ampRef.current === 0 ? -Infinity : gainToDb(ampRef.current)
     player.start()
     setIsPlaying(true)
-  }
+  }, [])
 
   // Queue autoplay for when the next buffer finishes loading.
   // Call this before updating selectedSample so the new player picks it up.
-  const playOnLoad = (): void => {
+  const playOnLoad = useCallback((): void => {
     pendingPlayRef.current = true
-  }
+  }, [])
 
-  const stop = (): void => {
+  const stop = useCallback((): void => {
     pendingPlayRef.current = false
     playerRef.current?.stop()
     setIsPlaying(false)
-  }
+  }, [])
 
   return { play, playOnLoad, stop, isPlaying, error }
 }

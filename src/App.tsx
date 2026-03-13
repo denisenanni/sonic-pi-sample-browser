@@ -3,6 +3,7 @@ import { SAMPLE_GROUPS, ALL_SAMPLES } from './data/samples'
 import type { SampleCategory, Sample } from './data/samples'
 import { SCALES } from './data/scales'
 import type { Scale } from './data/scales'
+import type { ActiveTab } from './types'
 import { useAudioPlayer } from './hooks/useAudioPlayer'
 import { useScalePlayer } from './hooks/useScalePlayer'
 import { Topbar } from './components/Topbar'
@@ -10,8 +11,6 @@ import { Sidebar } from './components/Sidebar'
 import { SampleGrid } from './components/SampleGrid'
 import { ScalesTab } from './components/ScalesTab'
 import { BottomPanel } from './components/BottomPanel'
-
-type ActiveTab = 'samples' | 'scales' | 'synths'
 
 interface AppState {
   activeTab: ActiveTab
@@ -114,6 +113,34 @@ function App() {
     setState((s) => ({ ...s, selectedCategory: category, selectedSample: first, search: '' }))
   }, [])
 
+  const handleTabChange = useCallback((tab: ActiveTab) => {
+    setState((s) => ({ ...s, activeTab: tab }))
+  }, [])
+
+  const handleSearchChange = useCallback((v: string) => {
+    setState((s) =>
+      s.activeTab === 'samples' ? { ...s, search: v } : { ...s, scalesSearch: v },
+    )
+  }, [])
+
+  const handleRootNoteChange = useCallback((note: string) => {
+    setState((s) => ({ ...s, scaleRootNote: note }))
+  }, [])
+
+  const handleOctaveChange = useCallback((oct: number) => {
+    setState((s) => ({ ...s, scaleOctave: oct }))
+  }, [])
+
+  const handleRateChange = useCallback((rate: number) => {
+    setState((s) => ({ ...s, rate }))
+  }, [])
+
+  const handleAmpChange = useCallback((amp: number) => {
+    setState((s) =>
+      s.activeTab === 'samples' ? { ...s, amp } : { ...s, scaleAmp: amp },
+    )
+  }, [])
+
   const handleCopy = useCallback(() => {
     if (state.activeTab === 'samples' && state.selectedSample) {
       navigator.clipboard.writeText(samplesSnippet)
@@ -189,13 +216,9 @@ function App() {
     <div className="app">
       <Topbar
         activeTab={state.activeTab}
-        onTabChange={(tab) => setState((s) => ({ ...s, activeTab: tab }))}
+        onTabChange={handleTabChange}
         search={isSamplesTab ? state.search : state.scalesSearch}
-        onSearchChange={(v) =>
-          isSamplesTab
-            ? setState((s) => ({ ...s, search: v }))
-            : setState((s) => ({ ...s, scalesSearch: v }))
-        }
+        onSearchChange={handleSearchChange}
       />
 
       <div className="main">
@@ -221,8 +244,8 @@ function App() {
             rootNote={state.scaleRootNote}
             octave={state.scaleOctave}
             onScaleClick={handleScaleClick}
-            onRootNoteChange={(note) => setState((s) => ({ ...s, scaleRootNote: note }))}
-            onOctaveChange={(oct) => setState((s) => ({ ...s, scaleOctave: oct }))}
+            onRootNoteChange={handleRootNoteChange}
+            onOctaveChange={handleOctaveChange}
           />
         )}
       </div>
@@ -230,13 +253,9 @@ function App() {
       <BottomPanel
         showRate={isSamplesTab}
         rate={state.rate}
-        onRateChange={(rate) => setState((s) => ({ ...s, rate }))}
+        onRateChange={handleRateChange}
         amp={isSamplesTab ? state.amp : state.scaleAmp}
-        onAmpChange={(amp) =>
-          isSamplesTab
-            ? setState((s) => ({ ...s, amp }))
-            : setState((s) => ({ ...s, scaleAmp: amp }))
-        }
+        onAmpChange={handleAmpChange}
         snippet={isSamplesTab ? samplesSnippet : scalesSnippet}
         hasSelection={isSamplesTab ? !!state.selectedSample : !!state.selectedScale}
         onCopy={handleCopy}
