@@ -1,17 +1,21 @@
 export type SampleCategory =
   | 'ambi'
+  | 'arovane'
   | 'bass'
   | 'bd'
   | 'drum'
   | 'elec'
   | 'glitch'
   | 'guit'
+  | 'hat'
   | 'loop'
   | 'mehackit'
   | 'misc'
   | 'perc'
+  | 'ride'
   | 'sn'
   | 'tabla'
+  | 'tbd'
   | 'vinyl';
 
 export interface Sample {
@@ -45,6 +49,16 @@ export const SAMPLE_GROUPS: SampleGroup[] = [
     ]),
   },
   {
+    category: 'arovane',
+    samples: makeSamples('arovane', [
+      'arovane_beat_a',
+      'arovane_beat_b',
+      'arovane_beat_c',
+      'arovane_beat_d',
+      'arovane_beat_e',
+    ]),
+  },
+  {
     category: 'bass',
     samples: makeSamples('bass', [
       'bass_hit_c',
@@ -74,6 +88,8 @@ export const SAMPLE_GROUPS: SampleGroup[] = [
       'bd_tek',
       'bd_ada',
       'bd_mehackit',
+      'bd_chip',
+      'bd_jazz',
     ]),
   },
   {
@@ -135,13 +151,13 @@ export const SAMPLE_GROUPS: SampleGroup[] = [
     category: 'glitch',
     samples: makeSamples('glitch', [
       'glitch_bass_g',
-      'glitch_perc_1',
-      'glitch_perc_2',
-      'glitch_perc_3',
-      'glitch_perc_4',
-      'glitch_perc_5',
-      'glitch_robot_1',
-      'glitch_robot_2',
+      'glitch_perc1',
+      'glitch_perc2',
+      'glitch_perc3',
+      'glitch_perc4',
+      'glitch_perc5',
+      'glitch_robot1',
+      'glitch_robot2',
     ]),
   },
   {
@@ -151,6 +167,32 @@ export const SAMPLE_GROUPS: SampleGroup[] = [
       'guit_e_fifths',
       'guit_e_slide',
       'guit_em9',
+    ]),
+  },
+  {
+    category: 'hat',
+    samples: makeSamples('hat', [
+      'hat_bdu',
+      'hat_cab',
+      'hat_cats',
+      'hat_gem',
+      'hat_gnu',
+      'hat_gump',
+      'hat_hier',
+      'hat_len',
+      'hat_mess',
+      'hat_metal',
+      'hat_noiz',
+      'hat_psych',
+      'hat_raw',
+      'hat_sci',
+      'hat_snap',
+      'hat_star',
+      'hat_tap',
+      'hat_yosh',
+      'hat_zan',
+      'hat_zap',
+      'hat_zild',
     ]),
   },
   {
@@ -165,30 +207,30 @@ export const SAMPLE_GROUPS: SampleGroup[] = [
       'loop_breakbeat',
       'loop_safari',
       'loop_tabla',
-      'loop_3dprinter',
+      'loop_3d_printer',
       'loop_drone_g_97',
       'loop_electric',
-      'loop_mehackit_1',
-      'loop_mehackit_2',
-      'loop_perc_1',
-      'loop_perc_2',
+      'loop_mehackit1',
+      'loop_mehackit2',
+      'loop_perc1',
+      'loop_perc2',
       'loop_weirdo',
     ]),
   },
   {
     category: 'mehackit',
     samples: makeSamples('mehackit', [
-      'mehackit_phone_1',
-      'mehackit_phone_2',
-      'mehackit_phone_3',
-      'mehackit_phone_4',
-      'mehackit_robot_1',
-      'mehackit_robot_2',
-      'mehackit_robot_3',
-      'mehackit_robot_4',
-      'mehackit_robot_5',
-      'mehackit_robot_6',
-      'mehackit_robot_7',
+      'mehackit_phone1',
+      'mehackit_phone2',
+      'mehackit_phone3',
+      'mehackit_phone4',
+      'mehackit_robot1',
+      'mehackit_robot2',
+      'mehackit_robot3',
+      'mehackit_robot4',
+      'mehackit_robot5',
+      'mehackit_robot6',
+      'mehackit_robot7',
     ]),
   },
   {
@@ -209,9 +251,16 @@ export const SAMPLE_GROUPS: SampleGroup[] = [
       'perc_swash',
       'perc_till',
       'perc_door',
-      'perc_impact_1',
-      'perc_impact_2',
+      'perc_impact1',
+      'perc_impact2',
       'perc_swoosh',
+    ]),
+  },
+  {
+    category: 'ride',
+    samples: makeSamples('ride', [
+      'ride_tri',
+      'ride_via',
     ]),
   },
   {
@@ -252,6 +301,22 @@ export const SAMPLE_GROUPS: SampleGroup[] = [
       'tabla_dhec',
       'tabla_na_s',
       'tabla_re',
+    ]),
+  },
+  {
+    category: 'tbd',
+    samples: makeSamples('tbd', [
+      'tbd_fxbed_loop',
+      'tbd_highkey_c4',
+      'tbd_pad_1',
+      'tbd_pad_2',
+      'tbd_pad_3',
+      'tbd_pad_4',
+      'tbd_perc_blip',
+      'tbd_perc_hat',
+      'tbd_perc_tap_1',
+      'tbd_perc_tap_2',
+      'tbd_voctone',
     ]),
   },
   {

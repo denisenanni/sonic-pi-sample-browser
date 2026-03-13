@@ -19,12 +19,7 @@ export function useAudioPlayer(
 
   // Dispose the current player and create a fresh one whenever sampleName changes.
   useEffect(() => {
-    playerRef.current?.dispose()
-    playerRef.current = null
-    setIsPlaying(false)
-    setError(null)
-
-    const url = `${import.meta.env.BASE_URL}samples/${sampleName}.wav`
+    const url = `${import.meta.env.BASE_URL}samples/${sampleName}.flac`
 
     const player = new Player({
       url,
@@ -32,7 +27,7 @@ export function useAudioPlayer(
         setError(null)
       },
       onerror: () => {
-        setError('File not found — add WAV to public/samples/')
+        setError('File not found — add FLAC to public/samples/')
         setIsPlaying(false)
       },
     }).toDestination()
@@ -44,6 +39,8 @@ export function useAudioPlayer(
     return () => {
       player.dispose()
       playerRef.current = null
+      setIsPlaying(false)
+      setError(null)
     }
   }, [sampleName])
 

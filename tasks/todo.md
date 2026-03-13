@@ -52,3 +52,27 @@
 - `src/App.tsx` — renders 5 test `SampleCard`s (`bd_haus`, `ambi_choir`, `loop_amen`, `elec_ping`, `perc_bell`).
 
 **Build:** `yarn build` passes with no TypeScript errors.
+
+---
+
+## Task 03 — Fix Audio Playback & Reconcile Sample Data
+
+### Plan
+
+- [x] 1. Fix `.wav` → `.flac` in `useAudioPlayer.ts`
+- [x] 2. Update `SampleCategory` union — add `arovane`, `hat`, `ride`, `tbd`
+- [x] 3. Fix all renamed entries (glitch, loop, mehackit, perc — drop underscores before numbers)
+- [x] 4. Add missing `bd_chip`, `bd_jazz` to the `bd` group
+- [x] 5. Add new groups: `arovane` (5), `hat` (21), `ride` (2), `tbd` (11)
+- [x] 6. Verify build passes
+
+---
+
+## Review — Task 03
+
+**Files modified:**
+
+- `src/hooks/useAudioPlayer.ts` — changed `.wav` to `.flac` in the URL construction.
+- `src/data/samples.ts` — corrected 18 renamed entries (underscore-before-number removed in glitch/loop/mehackit/perc); added `bd_chip` and `bd_jazz`; added 4 new categories (`arovane`, `hat`, `ride`, `tbd`) totalling 39 new samples. Total is now 196 samples across 18 categories. Every name matches an actual file in `public/samples/`.
+
+**Build:** `yarn build` passes with no TypeScript errors.
