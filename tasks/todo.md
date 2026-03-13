@@ -138,3 +138,29 @@
 - `src/index.css` — added `.scales-controls`, `.pill`, `.sample-name-col`, `.scale-note-count` styles.
 
 **Build:** `yarn build` passes with no TypeScript errors.
+
+---
+
+## Task 06 — Chords Tab
+
+### Plan
+
+- [x] 1. Create `src/data/chords.ts` — `Chord` type + all chords parsed from Sonic Pi source (including aliases)
+- [x] 2. Create `src/hooks/useChordPlayer.ts` — PolySynth (block) + Synth (arpeggio), play/stop/isPlaying, cleanup
+- [x] 3. Update `src/types.ts` — add `'chords'` to `ActiveTab`
+- [x] 4. Update `src/components/Topbar.tsx` — add Chords tab between Samples and Scales
+- [x] 5. Create `src/components/ChordsTab.tsx` — root/octave/numOctaves/mode controls + chord grid
+- [x] 6. Update `src/App.tsx` — expand `AppState`, wire `useChordPlayer`, keyboard shortcuts, conditional rendering
+
+### Review
+
+**Files created/modified:**
+
+- `src/data/chords.ts` — `Chord` type + 69 entries covering every chord name and alias from Sonic Pi's `chord.rb` (including string-keyed entries like `"7"`, `"+5"`, `"m7b5"` and symbol aliases like `maj`/`M`/`major`).
+- `src/hooks/useChordPlayer.ts` — creates one `PolySynth` and one `Synth` on mount. Block mode calls `poly.triggerAttack(notes)` on all notes simultaneously, then `releaseAll()` after 1500ms. Arpeggio mode fires one `setTimeout` per note at 120ms intervals. `stop()` clears all timeouts and releases both synths. `playOnLoad()` queues play until `chordName` changes. `useLatestRef` used for all mutable values. No `any`.
+- `src/types.ts` — `ActiveTab` now includes `'chords'`.
+- `src/components/Topbar.tsx` — Chords tab button added between Samples and Scales.
+- `src/components/ChordsTab.tsx` — root note pills, octave pills (3/4/5), num octaves pills (1/2/3), Block/Arpeggio mode pills, chord grid. Reuses all existing CSS classes (`.scales-controls`, `.pill`, `.sample-cell`, etc.). No new styles needed.
+- `src/App.tsx` — `AppState` expanded with 6 chord fields; `useChordPlayer` wired; `filteredChords` memo; `handleChordClick` and 4 chord control handlers added; keyboard handler extended for chords tab; `handleSearchChange`, `handleAmpChange`, `handleCopy` updated for 3-tab branching; JSX updated with ternary for three content areas.
+
+**Build:** `yarn build` passes with no TypeScript errors.

@@ -1,1 +1,1 @@
-export type ActiveTab = 'samples' | 'scales' | 'synths'
+export type ActiveTab = 'samples' | 'chords' | 'scales' | 'synths'

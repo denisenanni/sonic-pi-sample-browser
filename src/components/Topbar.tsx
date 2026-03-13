@@ -20,6 +20,12 @@ export function Topbar({ activeTab, onTabChange, search, onSearchChange }: Topba
           Samples
         </button>
         <button
+          className={`tab${activeTab === 'chords' ? ' active' : ''}`}
+          onClick={() => onTabChange('chords')}
+        >
+          Chords
+        </button>
+        <button
           className={`tab${activeTab === 'scales' ? ' active' : ''}`}
           onClick={() => onTabChange('scales')}
         >

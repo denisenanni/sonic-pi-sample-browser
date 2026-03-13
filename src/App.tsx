@@ -6,10 +6,15 @@ import type { Scale } from './data/scales'
 import type { ActiveTab } from './types'
 import { useAudioPlayer } from './hooks/useAudioPlayer'
 import { useScalePlayer } from './hooks/useScalePlayer'
+import { useChordPlayer } from './hooks/useChordPlayer'
+import type { ChordMode } from './hooks/useChordPlayer'
+import { CHORDS } from './data/chords'
+import type { Chord } from './data/chords'
 import { Topbar } from './components/Topbar'
 import { Sidebar } from './components/Sidebar'
 import { SampleGrid } from './components/SampleGrid'
 import { ScalesTab } from './components/ScalesTab'
+import { ChordsTab } from './components/ChordsTab'
 import { BottomPanel } from './components/BottomPanel'
 
 interface AppState {
@@ -20,6 +25,14 @@ interface AppState {
   rate: number
   amp: number
   search: string
+  // Chords tab
+  selectedChord: string | null
+  chordAmp: number
+  chordRootNote: string
+  chordOctave: number
+  chordNumOctaves: number
+  chordMode: ChordMode
+  chordsSearch: string
   // Scales tab
   selectedScale: string | null
   scaleAmp: number
@@ -35,6 +48,13 @@ const INITIAL_STATE: AppState = {
   rate: 1.0,
   amp: 1.0,
   search: '',
+  selectedChord: null,
+  chordAmp: 1.0,
+  chordRootNote: 'C',
+  chordOctave: 4,
+  chordNumOctaves: 1,
+  chordMode: 'block',
+  chordsSearch: '',
   selectedScale: null,
   scaleAmp: 1.0,
   scaleRootNote: 'C',
@@ -59,6 +79,17 @@ function App() {
   const { play: scalePlay, playOnLoad: scalePlayOnLoad, stop: scaleStop, isPlaying: scalePlaying } =
     useScalePlayer(selectedScaleSteps, state.scaleRootNote, state.scaleOctave, state.scaleAmp)
 
+  // ── Chords player ────────────────────────────────────────
+  const { play: chordPlay, playOnLoad: chordPlayOnLoad, stop: chordStop, isPlaying: chordPlaying } =
+    useChordPlayer(
+      state.selectedChord ?? '',
+      state.chordRootNote,
+      state.chordOctave,
+      state.chordNumOctaves,
+      state.chordMode,
+      state.chordAmp,
+    )
+
   // ── Derived data ────────────────────────────────────────
   const filteredSamples = useMemo<Sample[]>(() => {
     const q = state.search.trim().toLowerCase()
@@ -72,6 +103,12 @@ function App() {
     return SCALES
   }, [state.scalesSearch])
 
+  const filteredChords = useMemo<Chord[]>(() => {
+    const q = state.chordsSearch.trim().toLowerCase()
+    if (q) return CHORDS.filter((c) => c.name.includes(q))
+    return CHORDS
+  }, [state.chordsSearch])
+
   // ── Snippets ────────────────────────────────────────────
   const samplesSnippet = state.selectedSample
     ? `sample :${state.selectedSample}, rate: ${state.rate.toFixed(2)}, amp: ${state.amp.toFixed(2)}`
@@ -80,6 +117,10 @@ function App() {
   const scalesSnippet = state.selectedScale
     ? `scale :${state.scaleRootNote}, :${state.selectedScale}`
     : 'no scale selected'
+
+  const chordsSnippet = state.selectedChord
+    ? `chord :${state.chordRootNote}, :${state.selectedChord}`
+    : 'no chord selected'
 
   // ── Handlers ────────────────────────────────────────────
   const handleSampleClick = useCallback(
@@ -118,9 +159,11 @@ function App() {
   }, [])
 
   const handleSearchChange = useCallback((v: string) => {
-    setState((s) =>
-      s.activeTab === 'samples' ? { ...s, search: v } : { ...s, scalesSearch: v },
-    )
+    setState((s) => {
+      if (s.activeTab === 'samples') return { ...s, search: v }
+      if (s.activeTab === 'chords') return { ...s, chordsSearch: v }
+      return { ...s, scalesSearch: v }
+    })
   }, [])
 
   const handleRootNoteChange = useCallback((note: string) => {
@@ -131,23 +174,56 @@ function App() {
     setState((s) => ({ ...s, scaleOctave: oct }))
   }, [])
 
+  const handleChordClick = useCallback(
+    (name: string) => {
+      if (name === state.selectedChord) {
+        if (chordPlaying) chordStop()
+        else void chordPlay()
+      } else {
+        chordPlayOnLoad()
+        setState((s) => ({ ...s, selectedChord: name }))
+      }
+    },
+    [state.selectedChord, chordPlaying, chordPlay, chordPlayOnLoad, chordStop],
+  )
+
+  const handleChordRootNoteChange = useCallback((note: string) => {
+    setState((s) => ({ ...s, chordRootNote: note }))
+  }, [])
+
+  const handleChordOctaveChange = useCallback((oct: number) => {
+    setState((s) => ({ ...s, chordOctave: oct }))
+  }, [])
+
+  const handleChordNumOctavesChange = useCallback((n: number) => {
+    setState((s) => ({ ...s, chordNumOctaves: n }))
+  }, [])
+
+  const handleChordModeChange = useCallback((mode: ChordMode) => {
+    setState((s) => ({ ...s, chordMode: mode }))
+  }, [])
+
   const handleRateChange = useCallback((rate: number) => {
     setState((s) => ({ ...s, rate }))
   }, [])
 
   const handleAmpChange = useCallback((amp: number) => {
-    setState((s) =>
-      s.activeTab === 'samples' ? { ...s, amp } : { ...s, scaleAmp: amp },
-    )
+    setState((s) => {
+      if (s.activeTab === 'samples') return { ...s, amp }
+      if (s.activeTab === 'chords') return { ...s, chordAmp: amp }
+      return { ...s, scaleAmp: amp }
+    })
   }, [])
 
   const handleCopy = useCallback(() => {
     if (state.activeTab === 'samples' && state.selectedSample) {
       navigator.clipboard.writeText(samplesSnippet)
+    } else if (state.activeTab === 'chords' && state.selectedChord) {
+      navigator.clipboard.writeText(chordsSnippet)
     } else if (state.activeTab === 'scales' && state.selectedScale) {
       navigator.clipboard.writeText(scalesSnippet)
     }
-  }, [state.activeTab, state.selectedSample, state.selectedScale, samplesSnippet, scalesSnippet])
+  }, [state.activeTab, state.selectedSample, state.selectedChord, state.selectedScale, samplesSnippet, chordsSnippet, scalesSnippet])
 
   // ── Keyboard shortcuts ──────────────────────────────────
   useEffect(() => {
@@ -167,6 +243,27 @@ function App() {
             e.preventDefault()
             if (state.selectedSample) {
               if (samplePlaying) sampleStop(); else samplePlay()
+            }
+            break
+          case 'ArrowRight': e.preventDefault(); navigate(1); break
+          case 'ArrowLeft':  e.preventDefault(); navigate(-1); break
+          case 'ArrowDown':  e.preventDefault(); navigate(GRID_COL_ESTIMATE); break
+          case 'ArrowUp':    e.preventDefault(); navigate(-GRID_COL_ESTIMATE); break
+          case 'c': case 'C': handleCopy(); break
+        }
+      } else if (state.activeTab === 'chords') {
+        const idx = state.selectedChord
+          ? filteredChords.findIndex((c) => c.name === state.selectedChord)
+          : -1
+        const navigate = (delta: number) => {
+          const next = filteredChords[idx + delta]
+          if (next) setState((s) => ({ ...s, selectedChord: next.name }))
+        }
+        switch (e.key) {
+          case ' ':
+            e.preventDefault()
+            if (state.selectedChord) {
+              if (chordPlaying) chordStop(); else void chordPlay()
             }
             break
           case 'ArrowRight': e.preventDefault(); navigate(1); break
@@ -203,21 +300,46 @@ function App() {
     return () => document.removeEventListener('keydown', handler)
   }, [
     state.activeTab,
-    state.selectedSample, state.selectedScale,
-    filteredSamples, filteredScales,
-    samplePlaying, scalePlaying,
-    samplePlay, sampleStop, scalePlay, scaleStop,
+    state.selectedSample, state.selectedChord, state.selectedScale,
+    filteredSamples, filteredChords, filteredScales,
+    samplePlaying, chordPlaying, scalePlaying,
+    samplePlay, sampleStop, chordPlay, chordStop, scalePlay, scaleStop,
     handleCopy,
   ])
 
   const isSamplesTab = state.activeTab === 'samples'
+  const isChordsTab = state.activeTab === 'chords'
+
+  const activeSearch = isSamplesTab
+    ? state.search
+    : isChordsTab
+      ? state.chordsSearch
+      : state.scalesSearch
+
+  const activeSnippet = isSamplesTab
+    ? samplesSnippet
+    : isChordsTab
+      ? chordsSnippet
+      : scalesSnippet
+
+  const activeHasSelection = isSamplesTab
+    ? !!state.selectedSample
+    : isChordsTab
+      ? !!state.selectedChord
+      : !!state.selectedScale
+
+  const activeAmp = isSamplesTab
+    ? state.amp
+    : isChordsTab
+      ? state.chordAmp
+      : state.scaleAmp
 
   return (
     <div className="app">
       <Topbar
         activeTab={state.activeTab}
         onTabChange={handleTabChange}
-        search={isSamplesTab ? state.search : state.scalesSearch}
+        search={activeSearch}
         onSearchChange={handleSearchChange}
       />
 
@@ -235,6 +357,21 @@ function App() {
             selectedSample={state.selectedSample}
             isPlaying={samplePlaying}
             onSampleClick={handleSampleClick}
+          />
+        ) : isChordsTab ? (
+          <ChordsTab
+            chords={filteredChords}
+            selectedChord={state.selectedChord}
+            isPlaying={chordPlaying}
+            rootNote={state.chordRootNote}
+            octave={state.chordOctave}
+            numOctaves={state.chordNumOctaves}
+            mode={state.chordMode}
+            onChordClick={handleChordClick}
+            onRootNoteChange={handleChordRootNoteChange}
+            onOctaveChange={handleChordOctaveChange}
+            onNumOctavesChange={handleChordNumOctavesChange}
+            onModeChange={handleChordModeChange}
           />
         ) : (
           <ScalesTab
@@ -254,10 +391,10 @@ function App() {
         showRate={isSamplesTab}
         rate={state.rate}
         onRateChange={handleRateChange}
-        amp={isSamplesTab ? state.amp : state.scaleAmp}
+        amp={activeAmp}
         onAmpChange={handleAmpChange}
-        snippet={isSamplesTab ? samplesSnippet : scalesSnippet}
-        hasSelection={isSamplesTab ? !!state.selectedSample : !!state.selectedScale}
+        snippet={activeSnippet}
+        hasSelection={activeHasSelection}
         onCopy={handleCopy}
       />
     </div>
