@@ -76,3 +76,65 @@
 - `src/data/samples.ts` — corrected 18 renamed entries (underscore-before-number removed in glitch/loop/mehackit/perc); added `bd_chip` and `bd_jazz`; added 4 new categories (`arovane`, `hat`, `ride`, `tbd`) totalling 39 new samples. Total is now 196 samples across 18 categories. Every name matches an actual file in `public/samples/`.
 
 **Build:** `yarn build` passes with no TypeScript errors.
+
+---
+
+## Task 04 — Console UI
+
+### Plan
+
+- [x] 1. Update `useAudioPlayer.ts` — add `playOnLoad()` for click-to-new-sample autoplay, rate/amp refs for onload closure
+- [x] 2. Replace `src/index.css` with dark console theme (color vars, layout, topbar, sidebar, grid, bottom panel)
+- [x] 3. Create `src/components/Topbar.tsx`
+- [x] 4. Create `src/components/Sidebar.tsx`
+- [x] 5. Create `src/components/SampleGrid.tsx` (replaces SampleCard)
+- [x] 6. Create `src/components/BottomPanel.tsx`
+- [x] 7. Rewrite `App.tsx` — AppState, single useAudioPlayer, keyboard shortcuts, composition
+- [x] 8. Delete `src/components/SampleCard.tsx`
+- [x] 9. Verify build + smoke test
+
+---
+
+## Review — Task 04
+
+**Files modified/created:**
+
+- `src/hooks/useAudioPlayer.ts` — added `playOnLoad()` which sets `pendingPlayRef`; `onload` callback checks the flag and auto-plays with current rate/amp (read from always-current refs). This solves the async gap between selecting a new sample and its buffer loading.
+- `src/index.css` — full dark console theme: CSS custom properties for all colors, layout for app shell, topbar, sidebar, grid, cells, and bottom panel.
+- `src/components/Topbar.tsx` — title, Samples/Synths tabs (Synths disabled), search input.
+- `src/components/Sidebar.tsx` — category list driven by `SAMPLE_GROUPS`, active highlight.
+- `src/components/SampleGrid.tsx` — auto-fill CSS grid of sample cells; selected/playing states via class names.
+- `src/components/BottomPanel.tsx` — rate/amp sliders, keyboard shortcut hints, live code snippet, copy button.
+- `src/App.tsx` — `AppState` (tab, category, sample, rate, amp, search), single `useAudioPlayer` at app level, `filteredSamples` memo, `document`-level keyboard handler (Space/arrows/C), all composed together.
+- `src/components/SampleCard.tsx` — deleted.
+
+**Build:** `yarn build` passes with no TypeScript errors.
+
+---
+
+## Task 05 — Scales Tab
+
+### Plan
+
+- [x] 1. Create `src/data/scales.ts` — Scale type + all ~130 scales with rounded semitone steps
+- [x] 2. Create `src/hooks/useScalePlayer.ts` — Synth-based scale playback (setTimeout sequencing, stop/cleanup)
+- [x] 3. Update `src/components/Topbar.tsx` — add Scales tab (3 tabs: Samples, Scales, Synths)
+- [x] 4. Create `src/components/ScalesTab.tsx` — root note/octave pills + scales grid
+- [x] 5. Update `src/components/BottomPanel.tsx` — accept `snippet`/`hasSelection` props; hide Rate on Scales tab
+- [x] 6. Update `src/App.tsx` — expand AppState, wire useScalePlayer, keyboard handler, conditional rendering
+
+---
+
+## Review — Task 05
+
+**Files created/modified:**
+
+- `src/data/scales.ts` — `Scale` interface + 130 entries. Western scales use exact integer steps from the source; Turkish makam scales have koma-based intervals rounded to nearest semitone (tanini→2, bakiyye→1, kucuk_mucenneb→1, buyuk_mucenneb→2, artik_ikili→3).
+- `src/hooks/useScalePlayer.ts` — creates one `Tone.Synth` on mount (triangle wave, piano-like envelope), kept for the session. `play()` cancels pending timeouts, builds the note array from steps+root+octave, then fires one `setTimeout` per note at 200ms intervals. `stop()` clears all timeouts and calls `triggerRelease()`.
+- `src/components/Topbar.tsx` — expanded to `'samples' | 'scales' | 'synths'` ActiveTab type; Scales tab is now enabled.
+- `src/components/ScalesTab.tsx` — root note pills (12 notes), octave pills (3,4,5), same CSS grid as samples, each cell shows `:scale_name` + note count.
+- `src/components/BottomPanel.tsx` — refactored to accept `snippet`/`hasSelection`/`showRate` props; Rate slider hidden on Scales tab.
+- `src/App.tsx` — `AppState` expanded with scales fields; `useScalePlayer` called at app level; keyboard handler branches on `activeTab`; Sidebar hidden on Scales tab; `filteredScales` memo for search.
+- `src/index.css` — added `.scales-controls`, `.pill`, `.sample-name-col`, `.scale-note-count` styles.
+
+**Build:** `yarn build` passes with no TypeScript errors.
