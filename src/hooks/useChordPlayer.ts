@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { PolySynth, Synth, start as toneStart } from 'tone'
 import { CHORDS } from '../data/chords'
+import { ROOT_MIDI_OCT4, midiToNoteName } from '../utils/midi'
 
 export type ChordMode = 'block' | 'arpeggio'
 
@@ -12,21 +13,9 @@ export interface ChordPlayerControls {
 }
 
 const ARPEGGIO_INTERVAL_MS = 120
+const ARPEGGIO_DONE_DELAY_MS = 700
 const BLOCK_RELEASE_MS = 1500
 
-/** MIDI note numbers for each pitch class at octave 4 (C4 = 60). */
-const ROOT_MIDI_OCT4: Record<string, number> = {
-  C: 60, 'C#': 61, D: 62, 'D#': 63, E: 64, F: 65,
-  'F#': 66, G: 67, 'G#': 68, A: 69, 'A#': 70, B: 71,
-}
-
-const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
-
-function midiToNoteName(midi: number): string {
-  const octave = Math.floor(midi / 12) - 1
-  const name = NOTE_NAMES[midi % 12]
-  return `${name}${octave}`
-}
 
 function buildChordNotes(
   chordName: string,
@@ -134,7 +123,7 @@ export function useChordPlayer(
         const id = window.setTimeout(() => {
           arp.triggerAttackRelease(note, 0.15)
           if (i === notes.length - 1) {
-            const doneId = window.setTimeout(() => setIsPlaying(false), 700)
+            const doneId = window.setTimeout(() => setIsPlaying(false), ARPEGGIO_DONE_DELAY_MS)
             timeoutsRef.current.push(doneId)
           }
         }, i * ARPEGGIO_INTERVAL_MS)
@@ -154,7 +143,7 @@ export function useChordPlayer(
       numOctavesRef.current,
     )
     void playNotes(notes)
-  }, [chordName, playNotes, chordNameRef, rootNoteRef, octaveRef, numOctavesRef])
+  }, [chordName, playNotes])
 
   const play = useCallback(async (): Promise<void> => {
     const notes = buildChordNotes(
@@ -164,7 +153,7 @@ export function useChordPlayer(
       numOctavesRef.current,
     )
     await playNotes(notes)
-  }, [playNotes, chordNameRef, rootNoteRef, octaveRef, numOctavesRef])
+  }, [playNotes])
 
   const playOnLoad = useCallback((): void => {
     pendingPlayRef.current = true

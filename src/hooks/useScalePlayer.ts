@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Synth, start as toneStart } from 'tone'
+import { ROOT_MIDI_OCT4, midiToNoteName } from '../utils/midi'
 
 export interface ScalePlayerControls {
   play: () => Promise<void>
@@ -8,22 +9,8 @@ export interface ScalePlayerControls {
   isPlaying: boolean
 }
 
-const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
-
 const NOTE_INTERVAL_MS = 200
 const DONE_DELAY_MS = 700
-
-/** MIDI note numbers for each pitch class at octave 4 (C4 = 60). */
-const ROOT_MIDI_OCT4: Record<string, number> = {
-  C: 60, 'C#': 61, D: 62, 'D#': 63, E: 64, F: 65,
-  'F#': 66, G: 67, 'G#': 68, A: 69, 'A#': 70, B: 71,
-}
-
-function midiToNoteName(midi: number): string {
-  const octave = Math.floor(midi / 12) - 1
-  const name = NOTE_NAMES[midi % 12]
-  return `${name}${octave}`
-}
 
 function buildNotes(steps: number[], rootNote: string, octave: number): string[] {
   const baseMidi = ROOT_MIDI_OCT4[rootNote] + (octave - 4) * 12

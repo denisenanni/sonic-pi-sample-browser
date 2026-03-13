@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { SAMPLE_GROUPS, ALL_SAMPLES } from './data/samples'
 import type { SampleCategory, Sample } from './data/samples'
 import { SCALES } from './data/scales'
@@ -122,6 +122,16 @@ function App() {
     ? `chord :${state.chordRootNote}, :${state.selectedChord}`
     : 'no chord selected'
 
+  // Always-current ref so handleCopy reads the latest snippet without
+  // needing snippet strings in its useCallback dep array.
+  const activeSnippetRef = useRef(samplesSnippet)
+  activeSnippetRef.current =
+    state.activeTab === 'samples'
+      ? samplesSnippet
+      : state.activeTab === 'chords'
+        ? chordsSnippet
+        : scalesSnippet
+
   // ── Handlers ────────────────────────────────────────────
   const handleSampleClick = useCallback(
     (name: string) => {
@@ -216,14 +226,14 @@ function App() {
   }, [])
 
   const handleCopy = useCallback(() => {
-    if (state.activeTab === 'samples' && state.selectedSample) {
-      navigator.clipboard.writeText(samplesSnippet)
-    } else if (state.activeTab === 'chords' && state.selectedChord) {
-      navigator.clipboard.writeText(chordsSnippet)
-    } else if (state.activeTab === 'scales' && state.selectedScale) {
-      navigator.clipboard.writeText(scalesSnippet)
-    }
-  }, [state.activeTab, state.selectedSample, state.selectedChord, state.selectedScale, samplesSnippet, chordsSnippet, scalesSnippet])
+    const hasSelection =
+      state.activeTab === 'samples'
+        ? !!state.selectedSample
+        : state.activeTab === 'chords'
+          ? !!state.selectedChord
+          : !!state.selectedScale
+    if (hasSelection) void navigator.clipboard.writeText(activeSnippetRef.current)
+  }, [state.activeTab, state.selectedSample, state.selectedChord, state.selectedScale])
 
   // ── Keyboard shortcuts ──────────────────────────────────
   useEffect(() => {
@@ -304,7 +314,6 @@ function App() {
     filteredSamples, filteredChords, filteredScales,
     samplePlaying, chordPlaying, scalePlaying,
     samplePlay, sampleStop, chordPlay, chordStop, scalePlay, scaleStop,
-    handleCopy,
   ])
 
   const isSamplesTab = state.activeTab === 'samples'
