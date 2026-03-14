@@ -546,6 +546,106 @@ kbd {
   to { transform: rotate(360deg); }
 }
 
+/* ── Loop Sync (Tools sub-tab) ────────────────────────────── */
+
+.tools-loop-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.tools-loop-table th {
+  color: var(--text-dim);
+  text-align: left;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  font-weight: normal;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.tools-loop-table td {
+  padding: 4px 10px;
+  border-bottom: 1px solid #1e1e1e;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.tools-loop-table tr.tools-note-row:hover td {
+  background: var(--bg-surface);
+}
+
+.tools-loop-table tr.tools-note-row.highlighted td {
+  background: var(--accent-bg);
+}
+
+.tools-loop-rate {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.tools-preview-btn {
+  font-family: monospace;
+  font-size: 10px;
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tools-preview-btn:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.tools-preview-btn.active {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+/* Formula reference */
+.tools-formula-block {
+  margin-top: 4px;
+}
+
+.tools-formula-toggle {
+  font-family: monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+  letter-spacing: 0.04em;
+}
+
+.tools-formula-toggle:hover {
+  color: var(--text);
+}
+
+.tools-formula-body {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tools-formula-note {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.tools-formula-note code {
+  color: var(--accent);
+  font-size: 10px;
+}
+
 /* ── Synth+FX Tab ─────────────────────────────────────────── */
 
 .synth-fx-tab {

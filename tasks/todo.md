@@ -302,3 +302,37 @@
 - Bus routing: sequential `/s_new` approximation (FX nodes fire after synth into global output bus) — acknowledged limitation for a preview tool
 - No `any` types
 - All other tabs unaffected
+
+---
+
+## Task 11 — Loop Sync (Tools Tab, Third Section)
+
+### Plan
+
+- [x] 1. Create `src/data/loopDurations.ts` — `LoopInfo` type + `LOOP_DURATIONS` record. Durations measured with `afinfo` from the actual FLAC files in `public/samples/`. Beats per loop estimated from duration and known BPM where possible. All 17 loops present: loop_3d_printer, loop_amen, loop_amen_full, loop_breakbeat, loop_compus, loop_drone_g_97, loop_electric, loop_garzul, loop_industrial, loop_mehackit1, loop_mehackit2, loop_mika, loop_perc1, loop_perc2, loop_safari, loop_tabla, loop_weirdo.
+- [x] 2. Update `src/components/ToolsTab.tsx`
+- [x] 3. Add Loop Sync CSS to `src/index.css`
+- [x] 4. Verify build passes (`yarn build`)
+
+### Review
+
+**Files created/modified:**
+
+- `src/data/loopDurations.ts` — `LoopInfo` type (`name`, `duration`, `beats`) + `LOOP_DURATIONS` record + `ALL_LOOPS` array. 17 entries, durations measured with `afinfo`. Beats estimated from known BPM or round-number matching. `originalBpm` not stored — computed live as `(beats × 60) / duration` so the UI beats override always takes effect.
+- `src/components/ToolsTab.tsx` — Added `'loops'` to `ToolsSubTab`. Added `LoopSync` component: BPM input (40–300), beats-per-loop pill selector (2/4/8/16), loop table (Sample / Duration / Est. BPM / Rate / Sleep / Copy), selected-row detail panel with full `live_loop` snippet + copy, collapsible formula reference. All values recomputed live. Copy timer uses ref-based cleanup. Third pill "Loop Sync" added to sub-tab bar.
+- `src/index.css` — Loop Sync table styles + formula toggle/body styles added.
+
+**Build:** `yarn build` passes with zero TypeScript errors.
+
+**Key formulas (no `any`, all derived live):**
+- `original_bpm = (beats * 60) / duration`
+- `rate = target_bpm / original_bpm` (3 decimal places)
+- `sleep_beats = beats` (always equal to the beat count — `sample_duration` handles timing in Sonic Pi)
+
+**Actual measured durations (from `afinfo`):**
+- loop_amen: 1.753s | loop_amen_full: 6.857s | loop_breakbeat: 1.905s
+- loop_compus: 6.486s | loop_drone_g_97: 4.948s | loop_electric: 2.474s
+- loop_garzul: 8.000s | loop_industrial: 0.884s | loop_mehackit1: 2.474s
+- loop_mehackit2: 2.474s | loop_mika: 8.000s | loop_perc1: 2.474s
+- loop_perc2: 2.474s | loop_safari: 8.005s | loop_tabla: 10.674s
+- loop_weirdo: 4.948s | loop_3d_printer: 7.959s

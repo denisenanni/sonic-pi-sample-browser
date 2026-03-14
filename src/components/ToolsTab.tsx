@@ -1,8 +1,11 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { Player, start as toneStart } from 'tone'
+import { ALL_LOOPS } from '../data/loopDurations'
+import type { LoopInfo } from '../data/loopDurations'
 
 // ── Types ──────────────────────────────────────────────────────
 
-type ToolsSubTab = 'bpm' | 'notes'
+type ToolsSubTab = 'bpm' | 'notes' | 'loops'
 type BpmMode = 'bpm-to-sleep' | 'sleep-to-duration'
 
 interface RhythmicValue {
@@ -434,6 +437,257 @@ function NoteReference() {
   )
 }
 
+// ── Loop Sync ──────────────────────────────────────────────────
+
+const BEATS_OPTIONS = [2, 4, 8, 16] as const
+type BeatsOption = (typeof BEATS_OPTIONS)[number]
+
+function calcRate(loop: LoopInfo, targetBpm: number, beats: number): number {
+  const originalBpm = (beats * 60) / loop.duration
+  return targetBpm / originalBpm
+}
+
+function buildLoopSnippet(loop: LoopInfo, targetBpm: number, beats: number): string {
+  const rate = calcRate(loop, targetBpm, beats)
+  const rateStr = rate.toFixed(3)
+  return `use_bpm ${targetBpm}\nlive_loop :beat do\n  sample :${loop.name}, rate: ${rateStr}\n  sleep sample_duration(:${loop.name}, rate: ${rateStr})\nend`
+}
+
+function LoopSync() {
+  const [targetBpm, setTargetBpm] = useState(120)
+  const [beats, setBeats] = useState<BeatsOption>(4)
+  const [selectedName, setSelectedName] = useState<string | null>(null)
+  const [copiedName, setCopiedName] = useState<string | null>(null)
+  const [formulaOpen, setFormulaOpen] = useState(false)
+  const [playingName, setPlayingName] = useState<string | null>(null)
+
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const playerRef = useRef<Player | null>(null)
+  // Always-current ref so the onload callback uses the latest rate value
+  const rateRef = useRef<number>(1)
+
+  // Dispose the player and clear state
+  const stopPreview = useCallback(() => {
+    if (playerRef.current) {
+      playerRef.current.stop()
+      playerRef.current.dispose()
+      playerRef.current = null
+    }
+    setPlayingName(null)
+  }, [])
+
+  // Update playback rate live when BPM/beats changes while a loop is playing
+  useEffect(() => {
+    if (playingName === null || playerRef.current === null) return
+    const loop = ALL_LOOPS.find((l) => l.name === playingName)
+    if (!loop) return
+    const newRate = calcRate(loop, targetBpm, beats)
+    rateRef.current = newRate
+    if (playerRef.current.loaded) {
+      playerRef.current.playbackRate = newRate
+    }
+  }, [targetBpm, beats, playingName])
+
+  // Clean up player and timers on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current)
+      if (playerRef.current) { playerRef.current.stop(); playerRef.current.dispose() }
+    }
+  }, [])
+
+  const handlePreview = useCallback((loop: LoopInfo, rate: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    // Toggle off if same row
+    if (playingName === loop.name) {
+      stopPreview()
+      return
+    }
+
+    // Stop any current player before creating a new one
+    if (playerRef.current) {
+      playerRef.current.stop()
+      playerRef.current.dispose()
+      playerRef.current = null
+    }
+    setPlayingName(null)
+
+    rateRef.current = rate
+    const url = `${import.meta.env.BASE_URL}samples/${loop.name}.flac`
+    const player = new Player({
+      url,
+      loop: true,
+      onload: () => {
+        player.playbackRate = rateRef.current
+        void toneStart().then(() => { player.start() })
+      },
+    }).toDestination()
+
+    playerRef.current = player
+    setPlayingName(loop.name)
+  }, [playingName, stopPreview])
+
+  const selectedLoop = useMemo(
+    () => selectedName !== null ? ALL_LOOPS.find((l) => l.name === selectedName) ?? null : null,
+    [selectedName],
+  )
+
+  const selectedSnippet = useMemo(
+    () => selectedLoop ? buildLoopSnippet(selectedLoop, targetBpm, beats) : null,
+    [selectedLoop, targetBpm, beats],
+  )
+
+  const handleCopyRow = useCallback((loop: LoopInfo, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const snippet = buildLoopSnippet(loop, targetBpm, beats)
+    void copyToClipboard(snippet).then(() => {
+      setCopiedName(loop.name)
+      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopiedName(null), 1200)
+    })
+  }, [targetBpm, beats])
+
+  const handleCopySelected = useCallback(() => {
+    if (!selectedSnippet) return
+    void copyToClipboard(selectedSnippet).then(() => {
+      if (selectedLoop) setCopiedName(selectedLoop.name)
+      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopiedName(null), 1200)
+    })
+  }, [selectedSnippet, selectedLoop])
+
+  return (
+    <div className="tools-section">
+      {/* Controls */}
+      <div className="tools-field-row">
+        <label className="tools-label">Target BPM</label>
+        <input
+          className="tools-number-input"
+          type="number"
+          min={40}
+          max={300}
+          step={1}
+          value={targetBpm}
+          onChange={(e) => {
+            const v = parseInt(e.target.value, 10)
+            if (!isNaN(v) && v >= 40 && v <= 300) setTargetBpm(v)
+          }}
+        />
+      </div>
+
+      <div className="tools-field-row">
+        <label className="tools-label">Beats / loop</label>
+        <div className="tools-pill-group">
+          {BEATS_OPTIONS.map((b) => (
+            <button
+              key={b}
+              className={`tools-pill${beats === b ? ' active' : ''}`}
+              onClick={() => setBeats(b)}
+            >
+              {b}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Loop table */}
+      <div className="tools-note-table-wrapper">
+        <table className="tools-loop-table">
+          <thead>
+            <tr>
+              <th>Sample</th>
+              <th>Duration</th>
+              <th>Est. BPM</th>
+              <th>Rate</th>
+              <th>Sleep</th>
+              <th></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {ALL_LOOPS.map((loop) => {
+              const rate = calcRate(loop, targetBpm, beats)
+              const originalBpm = (beats * 60) / loop.duration
+              return (
+                <tr
+                  key={loop.name}
+                  className={`tools-note-row${selectedName === loop.name ? ' highlighted' : ''}`}
+                  onClick={() => setSelectedName(loop.name === selectedName ? null : loop.name)}
+                >
+                  <td className="tools-note-name">:{loop.name}</td>
+                  <td>{loop.duration.toFixed(3)}s</td>
+                  <td>{Math.round(originalBpm)} BPM</td>
+                  <td className="tools-loop-rate">{rate.toFixed(3)}</td>
+                  <td>{beats}</td>
+                  <td>
+                    <button
+                      className="tools-copy-btn tools-copy-row"
+                      onClick={(e) => handleCopyRow(loop, e)}
+                    >
+                      {copiedName === loop.name ? 'copied!' : 'copy'}
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      className={`tools-preview-btn${playingName === loop.name ? ' active' : ''}`}
+                      onClick={(e) => handlePreview(loop, rate, e)}
+                      title={playingName === loop.name ? 'Stop preview' : 'Play preview'}
+                    >
+                      {playingName === loop.name ? '■' : '▶'}
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Selected loop detail */}
+      {selectedSnippet && selectedLoop && (
+        <div className="tools-output-block">
+          <div className="tools-output-row">
+            <span className="tools-output-label">:{selectedLoop.name}</span>
+            <span className="tools-output-val">
+              rate {calcRate(selectedLoop, targetBpm, beats).toFixed(3)} · {beats} beats
+            </span>
+          </div>
+          <div className="tools-snippet-block">
+            <pre className="tools-snippet">{selectedSnippet}</pre>
+            <button className="tools-copy-btn" onClick={handleCopySelected}>
+              {copiedName === selectedLoop.name ? 'copied!' : 'copy'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Formula reference */}
+      <div className="tools-formula-block">
+        <button
+          className="tools-formula-toggle"
+          onClick={() => setFormulaOpen((o) => !o)}
+        >
+          {formulaOpen ? '▾' : '▸'} Formula reference
+        </button>
+        {formulaOpen && (
+          <div className="tools-formula-body">
+            <pre className="tools-snippet">{`rate  = target_bpm / original_bpm
+      = target_bpm / ((beats × 60) / duration)
+
+sleep = sample_duration(:name, rate: rate)
+        ← Sonic Pi computes this automatically`}</pre>
+            <p className="tools-formula-note">
+              Use the snippet as-is. Sonic Pi's <code>sample_duration</code> accounts for the
+              rate so the loop plays in perfect sync with <code>use_bpm</code>.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── ToolsTab (root) ────────────────────────────────────────────
 
 export function ToolsTab() {
@@ -456,12 +710,20 @@ export function ToolsTab() {
         >
           Note Reference
         </button>
+        <button
+          className={`tools-subtab-pill${subTab === 'loops' ? ' active' : ''}`}
+          onClick={() => setSubTab('loops')}
+        >
+          Loop Sync
+        </button>
       </div>
 
       <div className="tools-content">
         {subTab === 'bpm'
           ? <BpmCalculator bpm={bpm} onBpmChange={setBpm} />
-          : <NoteReference />
+          : subTab === 'notes'
+            ? <NoteReference />
+            : <LoopSync />
         }
       </div>
     </div>
