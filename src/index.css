@@ -546,6 +546,295 @@ kbd {
   to { transform: rotate(360deg); }
 }
 
+/* ── Synth+FX Tab ─────────────────────────────────────────── */
+
+.synth-fx-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.synth-fx-body {
+  flex: 1;
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* Left column */
+.synth-fx-left {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Right column */
+.synth-fx-right {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.synth-fx-section-title {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.synth-fx-right-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Field layout */
+.synth-fx-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.synth-fx-label {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.synth-fx-select {
+  font-family: monospace;
+  font-size: 11px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+  width: 100%;
+}
+
+.synth-fx-select:focus {
+  border-color: var(--accent-border);
+}
+
+/* Note/Octave pills */
+.synth-fx-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.synth-fx-pill {
+  font-family: monospace;
+  font-size: 10px;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.synth-fx-pill.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+/* Param sliders */
+.synth-fx-params {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.synth-fx-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.synth-fx-param-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.synth-fx-slider {
+  flex: 1;
+  accent-color: var(--accent);
+  height: 3px;
+  cursor: pointer;
+}
+
+.synth-fx-param-val {
+  font-size: 10px;
+  color: var(--text);
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Play button */
+.synth-fx-play-btn {
+  font-family: monospace;
+  font-size: 11px;
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.synth-fx-play-btn:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.synth-fx-play-btn.active {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.synth-fx-play-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Add FX button */
+.synth-fx-add-btn {
+  font-family: monospace;
+  font-size: 11px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.synth-fx-add-btn:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.synth-fx-add-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Empty state */
+.synth-fx-empty {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 18px 4px;
+  line-height: 1.6;
+}
+
+/* FX chain */
+.synth-fx-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* FX card */
+.synth-fx-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.synth-fx-card-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.synth-fx-card-index {
+  font-size: 10px;
+  color: var(--text-dim);
+  min-width: 12px;
+}
+
+.synth-fx-card-select {
+  flex: 1;
+  width: auto;
+}
+
+.synth-fx-remove-btn {
+  font-family: monospace;
+  font-size: 10px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.synth-fx-remove-btn:hover {
+  border-color: #5a2020;
+  color: #ff6b6b;
+}
+
+/* Bottom panel */
+.synth-fx-bottom {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.synth-fx-snippet {
+  flex: 1;
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--text);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.synth-fx-copy-btn {
+  font-family: monospace;
+  font-size: 10px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.synth-fx-copy-btn:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
 /* ── Tools Tab ────────────────────────────────────────────── */
 
 .tools-tab {

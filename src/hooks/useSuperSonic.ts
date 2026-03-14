@@ -43,11 +43,19 @@ export type SuperSonicState = {
   error: string | null
 }
 
+// One entry in the FX chain passed to playWithFx
+export type FxChainEntry = {
+  supersonicName: string         // e.g. "sonic-pi-fx_reverb"
+  params: Record<string, number> // per-FX param values
+  mix: number                    // 0–1 wet/dry
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────────
 export function useSuperSonic(): {
   state: SuperSonicState
   initEngine: () => void
   playNote: (synth: SynthDefinition, params: Record<string, number>) => Promise<void>
+  playWithFx: (synth: SynthDefinition, note: number, synthParams: Record<string, number>, fxChain: FxChainEntry[]) => Promise<void>
   stopAll: () => void
 } {
   const [state, setState] = useState<SuperSonicState>({
@@ -150,13 +158,80 @@ export function useSuperSonic(): {
     [],
   )
 
+  const playWithFx = useCallback(
+    async (
+      synth: SynthDefinition,
+      note: number,
+      synthParams: Record<string, number>,
+      fxChain: FxChainEntry[],
+    ) => {
+      if (!sonicInstance) return
+
+      // Stop any previously playing nodes
+      sonicInstance.send('/g_freeAll', 0)
+      lastNodeIdRef.current = null
+
+      // Collect all synthdef names that need to be loaded
+      const toLoad: string[] = []
+      if (!loadedSynthdefs.has(synth.supersonicName)) toLoad.push(synth.supersonicName)
+      for (const entry of fxChain) {
+        if (!loadedSynthdefs.has(entry.supersonicName)) toLoad.push(entry.supersonicName)
+      }
+
+      // Load all missing synthdefs in parallel
+      if (toLoad.length > 0) {
+        await Promise.all(
+          toLoad.map(async (name) => {
+            if (!loadedSynthdefs.has(name) && !loadingSynthdefsRef.current.has(name)) {
+              loadingSynthdefsRef.current.add(name)
+              try {
+                await sonicInstance!.loadSynthDef(name)
+                loadedSynthdefs.add(name)
+              } finally {
+                loadingSynthdefsRef.current.delete(name)
+              }
+            }
+          }),
+        )
+      }
+
+      if (!sonicInstance) return
+
+      // Fire the synth node (addToHead of group 0)
+      const synthKvArgs: (string | number)[] = ['note', note]
+      for (const [key, value] of Object.entries(synthParams)) {
+        if (key !== 'note') synthKvArgs.push(key, value)
+      }
+      const synthNodeId = nextNodeId()
+      lastNodeIdRef.current = synthNodeId
+      sonicInstance.send('/s_new', synth.supersonicName, synthNodeId, 0, 0, ...synthKvArgs)
+
+      // Delay 50ms so scsynth registers the synth output before FX nodes start
+      if (fxChain.length > 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 50))
+        if (!sonicInstance) return
+
+        // Fire each FX node in chain order (addToTail of group 0 — runs after synth)
+        for (const entry of fxChain) {
+          if (!loadedSynthdefs.has(entry.supersonicName)) continue
+          const fxKvArgs: (string | number)[] = ['mix', entry.mix]
+          for (const [key, value] of Object.entries(entry.params)) {
+            fxKvArgs.push(key, value)
+          }
+          sonicInstance.send('/s_new', entry.supersonicName, nextNodeId(), 1, 0, ...fxKvArgs)
+        }
+      }
+    },
+    [],
+  )
+
   const stopAll = useCallback(() => {
     if (!sonicInstance) return
     sonicInstance.send('/g_freeAll', 0)
     lastNodeIdRef.current = null
   }, [])
 
-  return { state, initEngine, playNote, stopAll }
+  return { state, initEngine, playNote, playWithFx, stopAll }
 }
 
 // ── Node ID counter ───────────────────────────────────────────────────────────

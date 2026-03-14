@@ -45,6 +45,12 @@ export function Topbar({ activeTab, onTabChange, search, onSearchChange, hideSea
           Synths
         </button>
         <button
+          className={`tab${activeTab === 'synth-fx' ? ' active' : ''}`}
+          onClick={() => onTabChange('synth-fx')}
+        >
+          Synth+FX
+        </button>
+        <button
           className={`tab${activeTab === 'tools' ? ' active' : ''}`}
           onClick={() => onTabChange('tools')}
         >

@@ -23,6 +23,7 @@ import { ScalesTab } from './components/ScalesTab'
 import { ChordsTab } from './components/ChordsTab'
 import { FxTab } from './components/FxTab'
 import { SynthsTab } from './components/SynthsTab'
+import { SynthFxTab } from './components/SynthFxTab'
 import { ToolsTab } from './components/ToolsTab'
 import { BottomPanel } from './components/BottomPanel'
 
@@ -167,7 +168,7 @@ function App() {
   )
 
   // ── Synths player ─────────────────────────────────────────
-  const { state: synthEngineState, initEngine: initSynthEngine, playNote, stopAll } =
+  const { state: synthEngineState, initEngine: initSynthEngine, playNote, playWithFx, stopAll } =
     useSuperSonic()
 
   const [loadingSynthdef, setLoadingSynthdef] = useState<string | null>(null)
@@ -182,15 +183,18 @@ function App() {
     if (prev === 'fx' && next !== 'fx') {
       fxPlayer.stop()
     }
-    if (prev === 'synths' && next !== 'synths') {
+    if ((prev === 'synths' || prev === 'synth-fx') && next !== 'synths' && next !== 'synth-fx') {
       stopAll()
       if (synthPlayingTimerRef.current !== null) {
         clearTimeout(synthPlayingTimerRef.current)
         synthPlayingTimerRef.current = null
       }
     }
-    // Init engine lazily when entering Synths tab for the first time
-    if (next === 'synths' && !synthEngineState.isReady && !synthEngineState.isLoading && !synthEngineState.error) {
+    // Init engine lazily when entering Synths or Synth+FX tab for the first time
+    if (
+      (next === 'synths' || next === 'synth-fx') &&
+      !synthEngineState.isReady && !synthEngineState.isLoading && !synthEngineState.error
+    ) {
       initSynthEngine()
     }
     prevTabRef.current = next
@@ -605,6 +609,7 @@ function App() {
   const isChordsTab = state.activeTab === 'chords'
   const isFxTab = state.activeTab === 'fx'
   const isSynthsTab = state.activeTab === 'synths'
+  const isSynthFxTab = state.activeTab === 'synth-fx'
   const isToolsTab = state.activeTab === 'tools'
 
   const activeSearch = isSamplesTab
@@ -615,7 +620,7 @@ function App() {
         ? state.fxSearch
         : isSynthsTab
           ? state.synthsSearch
-          : isToolsTab
+          : isToolsTab || isSynthFxTab
             ? ''
             : state.scalesSearch
 
@@ -654,7 +659,7 @@ function App() {
         onTabChange={handleTabChange}
         search={activeSearch}
         onSearchChange={handleSearchChange}
-        hideSearch={isToolsTab}
+        hideSearch={isToolsTab || isSynthFxTab}
       />
 
       <div className="main">
@@ -721,6 +726,12 @@ function App() {
             onOctaveChange={handleSynthOctaveChange}
             onCopy={handleCopy}
           />
+        ) : isSynthFxTab ? (
+          <SynthFxTab
+            engineState={synthEngineState}
+            playWithFx={playWithFx}
+            stopAll={stopAll}
+          />
         ) : isToolsTab ? (
           <ToolsTab />
         ) : (
@@ -737,7 +748,7 @@ function App() {
         )}
       </div>
 
-      {!isFxTab && !isSynthsTab && !isToolsTab && (
+      {!isFxTab && !isSynthsTab && !isSynthFxTab && !isToolsTab && (
         <BottomPanel
           showRate={isSamplesTab}
           rate={state.rate}

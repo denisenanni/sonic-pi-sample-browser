@@ -262,3 +262,43 @@
 - `src/index.css` — ~220 lines of new Tools tab styles added before the mobile breakpoint block.
 
 **Build:** `yarn build` passes with zero TypeScript errors.
+
+---
+
+## Task 10 — Synth + FX Combined Tab
+
+### Plan
+
+- [x] 1. Create `src/data/synthFx.ts` — `SynthFxDefinition` type (importing `FxParam` from `fx.ts`); curated list of confirmed CDN synthdefs: reverb, gverb, echo, distortion, bitcrusher, lpf, hpf, rlpf, rhpf, wobble, flanger, pitch_shift, pan, tremolo, krush
+- [x] 2. Update `src/hooks/useSuperSonic.ts` — add `playWithFx(synth, note, synthParams, fxChain)` to the hook return; loads all synthdefs concurrently, fires `/s_new` for synth then each FX in sequence; tracks all node IDs in a ref; `stopAll` handles cleanup via `/g_freeAll 0`
+- [x] 3. Create `src/components/SynthFxTab.tsx` — self-contained tab receiving `engineState`, `playWithFx`, `stopAll` from App:
+  - Left column: synth dropdown, note/octave pills (same as SynthsTab), synth param sliders (excl. `note`), amp slider, Play/Stop button
+  - Right column: "Add FX" button (disabled at 3), FX cards (FX dropdown + mix slider + per-FX param sliders + remove button), empty placeholder when chain is empty
+  - Bottom panel: live nested code snippet + copy button
+  - FX chain state: `Array<{ id: number; fxKey: string; mix: number; params: Record<string, number> }>` (max 3)
+  - Code snippet: outermost FX first, innermost FX wraps synth; only non-default params shown
+- [x] 4. Update `src/types.ts` — add `'synth-fx'` to `ActiveTab`
+- [x] 5. Update `src/components/Topbar.tsx` — add `Synth+FX` tab after Synths (before Tools); tab order: Samples | Chords | Scales | FX | Synths | Synth+FX | Tools
+- [x] 6. Update `src/App.tsx` — expose `playWithFx` from `useSuperSonic`; add `isSynthFxTab` flag; stop all on leaving tab; pass engine props to `SynthFxTab`; hide `BottomPanel` and search on synth-fx tab; extend `handleSearchChange`
+- [x] 7. Add Synth+FX CSS to `src/index.css`
+- [x] 8. Verify build passes (`yarn build`)
+
+### Review
+
+**Files created/modified:**
+
+- `src/data/synthFx.ts` — `SynthFxDefinition` type (reuses `FxParam` from `fx.ts`). 15 curated FX all confirmed against CDN index: reverb, gverb, echo, distortion, bitcrusher, krush, lpf, hpf, rlpf, wobble, flanger, pitch_shift, tremolo, pan, ring_mod.
+- `src/hooks/useSuperSonic.ts` — Added `FxChainEntry` type export and `playWithFx` method. Stops previous nodes via `/g_freeAll 0` before playing. Loads all required synthdefs in parallel via `Promise.all`. Fires synth with `/s_new` addToHead (action 0), then waits 50ms so scsynth registers the synth output before FX nodes start, then fires each FX node with `/s_new` addToTail (action 1) so they execute after the synth in server order.
+- `src/components/SynthFxTab.tsx` — Self-contained two-column tab. Left: synth dropdown, note/octave pills, per-synth param sliders, Play/Stop. Right: "Add FX" button (disabled at 3), FX cards each with dropdown/mix/params/remove. Bottom: live `with_fx` snippet + copy. Snippet nests FX outermost-first; only non-default params shown. Engine status banner reuses existing `.synths-banner` CSS.
+- `src/types.ts` — `ActiveTab` now includes `'synth-fx'`.
+- `src/components/Topbar.tsx` — Synth+FX tab button added between Synths and Tools.
+- `src/App.tsx` — Destructures `playWithFx` from `useSuperSonic`; `isSynthFxTab` flag; tab-switch stops all nodes when leaving either synths or synth-fx tab to the other; engine lazily inits on first visit to either tab; `SynthFxTab` wired into render; BottomPanel and search bar hidden on synth-fx tab.
+- `src/index.css` — ~230 lines of Synth+FX tab styles.
+
+**Build:** `yarn build` passes with zero TypeScript errors.
+
+**Key constraints:**
+- SuperSonic shared singleton — engine already initialised by Synths tab, or lazily init on first Synth+FX visit (same logic as Synths tab)
+- Bus routing: sequential `/s_new` approximation (FX nodes fire after synth into global output bus) — acknowledged limitation for a preview tool
+- No `any` types
+- All other tabs unaffected
