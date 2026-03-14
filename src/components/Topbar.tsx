@@ -37,7 +37,10 @@ export function Topbar({ activeTab, onTabChange, search, onSearchChange }: Topba
         >
           FX
         </button>
-        <button className="tab" disabled>
+        <button
+          className={`tab${activeTab === 'synths' ? ' active' : ''}`}
+          onClick={() => onTabChange('synths')}
+        >
           Synths
         </button>
       </div>

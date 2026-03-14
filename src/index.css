@@ -473,6 +473,79 @@ kbd {
   gap: 12px;
 }
 
+/* ── Synths Tab ───────────────────────────────────────────── */
+
+.synths-tab .fx-top-controls {
+  padding: 6px 12px;
+}
+
+.synth-cell {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 52px;
+}
+
+.synth-cell .sample-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  word-break: break-word;
+}
+
+/* Engine status banner */
+.synths-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.synths-banner--loading {
+  background: #0f1a0f;
+  color: var(--accent);
+  border-bottom: 1px solid var(--accent-border);
+}
+
+.synths-banner--error {
+  background: #1a0f0f;
+  color: #ff6b6b;
+  border-bottom: 1px solid #5a2020;
+}
+
+/* Pulsing dot for loading state */
+.synths-banner-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  animation: synths-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes synths-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+/* Small spinner on synth card while loading synthdef */
+.synth-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--accent-border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: synth-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes synth-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── Mobile ───────────────────────────────────────────────── */
 
 @media (max-width: 640px) {

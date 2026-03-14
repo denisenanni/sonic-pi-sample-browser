@@ -192,3 +192,30 @@
 - `src/App.tsx` — `AppState` extended with `selectedFx`, `fxSample`, `fxParams`, `fxMix`, `fxAmp`, `fxSearch`; `useFxPlayer` wired; tab-switch effect stops FX playback; `filteredFx` memo; `handleFxClick` resets params to defaults on FX change; keyboard shortcuts extended for FX tab; `handleSearchChange`/`handleAmpChange`/`handleCopy` updated for 4-tab branching; `BottomPanel` hidden on FX tab (FxTab has its own). All other tabs unaffected.
 
 **Build:** `yarn build` passes with no TypeScript errors.
+
+---
+
+## Task 08 — Synths Tab (powered by SuperSonic / scsynth)
+
+### Plan
+
+- [x] 1. Create `src/data/synths.ts` — `SynthParam`, `SynthDefinition`, `SYNTHS` array (35 synths with 4–6 params each)
+- [x] 2. Create `src/hooks/useSuperSonic.ts` — singleton engine lifecycle hook; dynamic CDN load; `playNote`, `stopAll`; no `any`
+- [x] 3. Create `src/components/SynthsTab.tsx` — engine status banner, note/octave controls, synth grid, bottom panel with param sliders + code snippet
+- [x] 4. Update `src/components/Topbar.tsx` — enable Synths tab (remove `disabled`)
+- [x] 5. Update `src/App.tsx` — add synths state fields, wire useSuperSonic, stop-on-tab-switch, keyboard shortcuts, conditional rendering; extend `handleSearchChange`, `handleAmpChange`, `handleCopy`
+- [x] 6. Add Synths tab CSS to `src/index.css`
+- [x] 7. Verify build passes with no TypeScript errors
+
+### Review
+
+**Files created/modified:**
+
+- `src/data/synths.ts` — `SynthParam`, `SynthDefinition` types + `SYNTHS` array (35 Sonic Pi synths). Each synth has `name`, `supersonicName` (`sonic-pi-{name}`), `label`, `doc`, and 4–6 typed params. Filter synths (prophet, tb303, hollow, dark_ambience, blade) get `cutoff`/`res`; FM synths get `divisor`/`depth`; modulation synths get `mod_range`/`mod_rate`. No `any`.
+- `src/hooks/useSuperSonic.ts` — Minimal typed interface for SuperSonic (`SuperSonicInstance`). Module-level singleton (`sonicInstance`, `initPromise`, `loadedSynthdefs`) persists across tab switches. `loadSuperSonicScript()` injects a `<script type="module">` tag from unpkg — no bundled import (GPL isolation). `useSuperSonic()` exposes `state` (isReady/isLoading/error), `initEngine()`, `playNote()`, `stopAll()`. `playNote()` stops the previous node, loads the synthdef if not cached, then calls `send('/s_new', ...)` with flat key-value params. Local node ID counter (1000–30000) tracks active nodes for `/n_free`.
+- `src/components/SynthsTab.tsx` — Engine status banner (pulsing dot while loading, red text on error). Note/octave pill controls (12 notes × 5 octaves). Synth grid reusing `.sample-cell`/`.fx-cell` CSS classes; per-card spinner while synthdef loads. Bottom panel: all params except `note` rendered as sliders; live code snippet (`synth :name, note: N, ...`); copy button with flash confirmation.
+- `src/components/Topbar.tsx` — Synths tab enabled (was `disabled`).
+- `src/App.tsx` — `AppState` + `INITIAL_STATE` extended with `selectedSynth`, `synthParams`, `synthRootNote`, `synthOctave`, `synthsSearch`. `useSuperSonic` wired; engine init deferred until first Synths tab visit. Tab-switch effect stops FX on leaving FX tab and calls `stopAll()` on leaving Synths tab. `filteredSynths` memo. `handleSynthClick` builds play params with current note/octave, calls `playNote()` async. Keyboard shortcuts (Space/arrows/C) extended for synths tab. `handleSearchChange`/`handleCopy` updated. BottomPanel hidden on both FX and Synths tabs.
+- `src/index.css` — Added `.synths-tab`, `.synth-cell`, `.synths-banner` (loading/error variants), `.synths-banner-dot` (pulse animation), `.synth-spinner` (spin animation) styles.
+
+**Build:** `yarn build` + `tsc --noEmit` pass with zero TypeScript errors.

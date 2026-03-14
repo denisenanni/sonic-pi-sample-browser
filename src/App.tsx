@@ -9,16 +9,20 @@ import { useScalePlayer } from './hooks/useScalePlayer'
 import { useChordPlayer } from './hooks/useChordPlayer'
 import type { ChordMode } from './hooks/useChordPlayer'
 import { useFxPlayer } from './hooks/useFxPlayer'
+import { useSuperSonic } from './hooks/useSuperSonic'
 import { CHORDS } from './data/chords'
 import type { Chord } from './data/chords'
 import { FX_LIST, FX_PREVIEW_SAMPLES } from './data/fx'
 import type { FxDefinition } from './data/fx'
+import { SYNTHS } from './data/synths'
+import type { SynthDefinition } from './data/synths'
 import { Topbar } from './components/Topbar'
 import { Sidebar } from './components/Sidebar'
 import { SampleGrid } from './components/SampleGrid'
 import { ScalesTab } from './components/ScalesTab'
 import { ChordsTab } from './components/ChordsTab'
 import { FxTab } from './components/FxTab'
+import { SynthsTab } from './components/SynthsTab'
 import { BottomPanel } from './components/BottomPanel'
 
 interface AppState {
@@ -50,6 +54,12 @@ interface AppState {
   fxMix: number
   fxAmp: number
   fxSearch: string
+  // Synths tab
+  selectedSynth: string | null
+  synthParams: Record<string, number>
+  synthRootNote: string
+  synthOctave: number
+  synthsSearch: string
 }
 
 const INITIAL_STATE: AppState = {
@@ -77,6 +87,11 @@ const INITIAL_STATE: AppState = {
   fxMix: 1.0,
   fxAmp: 1.0,
   fxSearch: '',
+  selectedSynth: null,
+  synthParams: {},
+  synthRootNote: 'C',
+  synthOctave: 4,
+  synthsSearch: '',
 }
 
 const GRID_COL_ESTIMATE = 6
@@ -150,14 +165,31 @@ function App() {
     state.fxAmp,
   )
 
-  // Stop FX playback when switching away from the FX tab
+  // ── Synths player ─────────────────────────────────────────
+  const { state: synthEngineState, initEngine: initSynthEngine, playNote, stopAll } =
+    useSuperSonic()
+
+  const [loadingSynthdef, setLoadingSynthdef] = useState<string | null>(null)
+  const [synthIsPlaying, setSynthIsPlaying] = useState(false)
+
+  // Stop FX playback and synths when switching away from those tabs
   const prevTabRef = useRef(state.activeTab)
   useEffect(() => {
-    if (prevTabRef.current === 'fx' && state.activeTab !== 'fx') {
+    const prev = prevTabRef.current
+    const next = state.activeTab
+    if (prev === 'fx' && next !== 'fx') {
       fxPlayer.stop()
     }
-    prevTabRef.current = state.activeTab
-  }, [state.activeTab, fxPlayer])
+    if (prev === 'synths' && next !== 'synths') {
+      stopAll()
+      setSynthIsPlaying(false)
+    }
+    // Init engine lazily when entering Synths tab for the first time
+    if (next === 'synths' && !synthEngineState.isReady && !synthEngineState.isLoading && !synthEngineState.error) {
+      initSynthEngine()
+    }
+    prevTabRef.current = next
+  }, [state.activeTab, fxPlayer, stopAll, initSynthEngine, synthEngineState])
 
   // ── Derived data ────────────────────────────────────────
   const filteredSamples = useMemo<Sample[]>(() => {
@@ -184,6 +216,12 @@ function App() {
     return FX_LIST
   }, [state.fxSearch])
 
+  const filteredSynths = useMemo<SynthDefinition[]>(() => {
+    const q = state.synthsSearch.trim().toLowerCase()
+    if (q) return SYNTHS.filter((s) => s.label.toLowerCase().includes(q) || s.name.includes(q))
+    return SYNTHS
+  }, [state.synthsSearch])
+
   // ── Snippets ────────────────────────────────────────────
   const samplesSnippet = state.selectedSample
     ? `sample :${state.selectedSample}, rate: ${state.rate.toFixed(2)}, amp: ${state.amp.toFixed(2)}`
@@ -198,6 +236,30 @@ function App() {
     : 'no chord selected'
 
   const fxSnippet = buildFxSnippet(state.selectedFx, state.fxSample, state.fxParams)
+
+  const synthMidiNote = useMemo(() => {
+    const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
+    const idx = NOTE_NAMES.indexOf(state.synthRootNote as (typeof NOTE_NAMES)[number])
+    return (state.synthOctave + 1) * 12 + idx
+  }, [state.synthRootNote, state.synthOctave])
+
+  const synthSnippet = useMemo(() => {
+    const synth = SYNTHS.find((s) => s.name === state.selectedSynth)
+    if (!synth) return 'no synth selected'
+    const nonDefault = synth.params
+      .filter((p) => {
+        if (p.key === 'note' || p.key === 'amp') return false
+        const val = state.synthParams[p.key] ?? p.default
+        return Math.abs(val - p.default) >= p.step
+      })
+      .map((p) => {
+        const val = state.synthParams[p.key] ?? p.default
+        return `${p.key}: ${p.step < 1 ? val.toFixed(2) : String(Math.round(val))}`
+      })
+    const amp = state.synthParams['amp'] ?? 1
+    const parts = [`note: ${synthMidiNote}`, `amp: ${amp.toFixed(2)}`, ...nonDefault]
+    return `synth :${synth.name}, ${parts.join(', ')}`
+  }, [state.selectedSynth, state.synthParams, synthMidiNote])
 
   // ── Handlers ────────────────────────────────────────────
   const handleSampleClick = useCallback(
@@ -240,6 +302,7 @@ function App() {
       if (s.activeTab === 'samples') return { ...s, search: v }
       if (s.activeTab === 'chords') return { ...s, chordsSearch: v }
       if (s.activeTab === 'fx') return { ...s, fxSearch: v }
+      if (s.activeTab === 'synths') return { ...s, synthsSearch: v }
       return { ...s, scalesSearch: v }
     })
   }, [])
@@ -302,7 +365,9 @@ function App() {
           ? !!state.selectedChord
           : state.activeTab === 'fx'
             ? !!state.selectedFx
-            : !!state.selectedScale
+            : state.activeTab === 'synths'
+              ? !!state.selectedSynth
+              : !!state.selectedScale
     if (hasSelection) {
       const snippet =
         state.activeTab === 'samples'
@@ -311,10 +376,12 @@ function App() {
             ? chordsSnippet
             : state.activeTab === 'fx'
               ? fxSnippet
-              : scalesSnippet
+              : state.activeTab === 'synths'
+                ? synthSnippet
+                : scalesSnippet
       void navigator.clipboard.writeText(snippet)
     }
-  }, [state.activeTab, state.selectedSample, state.selectedChord, state.selectedScale, state.selectedFx, samplesSnippet, chordsSnippet, scalesSnippet, fxSnippet])
+  }, [state.activeTab, state.selectedSample, state.selectedChord, state.selectedScale, state.selectedFx, state.selectedSynth, samplesSnippet, chordsSnippet, scalesSnippet, fxSnippet, synthSnippet])
 
   // ── FX-specific handlers ─────────────────────────────────
   const handleFxClick = useCallback((key: string) => {
@@ -340,6 +407,57 @@ function App() {
 
   const handleFxAmpChange = useCallback((value: number) => {
     setState((s) => ({ ...s, fxAmp: value }))
+  }, [])
+
+  // ── Synths handlers ──────────────────────────────────────
+  const handleSynthClick = useCallback(
+    (name: string) => {
+      if (!synthEngineState.isReady) return
+      const synth = SYNTHS.find((s) => s.name === name)
+      if (!synth) return
+
+      setState((s) => {
+        // Build default params for newly selected synth
+        const newParams: Record<string, number> = {}
+        for (const p of synth.params) {
+          newParams[p.key] = s.synthParams[p.key] ?? p.default
+        }
+        // Inject current note
+        newParams['note'] = (s.synthOctave + 1) * 12 +
+          ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(s.synthRootNote)
+        return { ...s, selectedSynth: name, synthParams: newParams }
+      })
+
+      // Play after state update
+      setLoadingSynthdef(name)
+      const currentState = { ...state, selectedSynth: name }
+      const noteIdx = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(currentState.synthRootNote)
+      const midiNote = (currentState.synthOctave + 1) * 12 + noteIdx
+      const playParams: Record<string, number> = { note: midiNote }
+      for (const p of synth.params) {
+        if (p.key !== 'note') playParams[p.key] = state.synthParams[p.key] ?? p.default
+      }
+
+      void playNote(synth, playParams).then(() => {
+        setLoadingSynthdef(null)
+        setSynthIsPlaying(true)
+      }).catch(() => {
+        setLoadingSynthdef(null)
+      })
+    },
+    [synthEngineState.isReady, playNote, state],
+  )
+
+  const handleSynthParamChange = useCallback((key: string, value: number) => {
+    setState((s) => ({ ...s, synthParams: { ...s.synthParams, [key]: value } }))
+  }, [])
+
+  const handleSynthRootNoteChange = useCallback((note: string) => {
+    setState((s) => ({ ...s, synthRootNote: note }))
+  }, [])
+
+  const handleSynthOctaveChange = useCallback((oct: number) => {
+    setState((s) => ({ ...s, synthOctave: oct }))
   }, [])
 
   // ── Keyboard shortcuts ──────────────────────────────────
@@ -431,6 +549,28 @@ function App() {
           case 'ArrowUp':    e.preventDefault(); navigate(-GRID_COL_ESTIMATE); break
           case 'c': case 'C': handleCopy(); break
         }
+      } else if (state.activeTab === 'synths') {
+        const idx = state.selectedSynth
+          ? filteredSynths.findIndex((s) => s.name === state.selectedSynth)
+          : -1
+        const navigate = (delta: number) => {
+          const next = filteredSynths[idx + delta]
+          if (next) handleSynthClick(next.name)
+        }
+        switch (e.key) {
+          case ' ':
+            e.preventDefault()
+            if (state.selectedSynth) {
+              if (synthIsPlaying) { stopAll(); setSynthIsPlaying(false) }
+              else handleSynthClick(state.selectedSynth)
+            }
+            break
+          case 'ArrowRight': e.preventDefault(); navigate(1); break
+          case 'ArrowLeft':  e.preventDefault(); navigate(-1); break
+          case 'ArrowDown':  e.preventDefault(); navigate(GRID_COL_ESTIMATE); break
+          case 'ArrowUp':    e.preventDefault(); navigate(-GRID_COL_ESTIMATE); break
+          case 'c': case 'C': handleCopy(); break
+        }
       }
     }
 
@@ -438,16 +578,17 @@ function App() {
     return () => document.removeEventListener('keydown', handler)
   }, [
     state.activeTab,
-    state.selectedSample, state.selectedChord, state.selectedScale, state.selectedFx,
-    filteredSamples, filteredChords, filteredScales, filteredFx,
-    samplePlaying, chordPlaying, scalePlaying, fxPlayer,
-    samplePlay, sampleStop, chordPlay, chordStop, scalePlay, scaleStop,
-    handleCopy, handleFxClick,
+    state.selectedSample, state.selectedChord, state.selectedScale, state.selectedFx, state.selectedSynth,
+    filteredSamples, filteredChords, filteredScales, filteredFx, filteredSynths,
+    samplePlaying, chordPlaying, scalePlaying, fxPlayer, synthIsPlaying,
+    samplePlay, sampleStop, chordPlay, chordStop, scalePlay, scaleStop, stopAll,
+    handleCopy, handleFxClick, handleSynthClick,
   ])
 
   const isSamplesTab = state.activeTab === 'samples'
   const isChordsTab = state.activeTab === 'chords'
   const isFxTab = state.activeTab === 'fx'
+  const isSynthsTab = state.activeTab === 'synths'
 
   const activeSearch = isSamplesTab
     ? state.search
@@ -455,7 +596,9 @@ function App() {
       ? state.chordsSearch
       : isFxTab
         ? state.fxSearch
-        : state.scalesSearch
+        : isSynthsTab
+          ? state.synthsSearch
+          : state.scalesSearch
 
   const activeSnippet = isSamplesTab
     ? samplesSnippet
@@ -463,7 +606,9 @@ function App() {
       ? chordsSnippet
       : isFxTab
         ? fxSnippet
-        : scalesSnippet
+        : isSynthsTab
+          ? synthSnippet
+          : scalesSnippet
 
   const activeHasSelection = isSamplesTab
     ? !!state.selectedSample
@@ -471,7 +616,9 @@ function App() {
       ? !!state.selectedChord
       : isFxTab
         ? !!state.selectedFx
-        : !!state.selectedScale
+        : isSynthsTab
+          ? !!state.selectedSynth
+          : !!state.selectedScale
 
   const activeAmp = isSamplesTab
     ? state.amp
@@ -538,6 +685,22 @@ function App() {
             onAmpChange={handleFxAmpChange}
             onCopy={handleCopy}
           />
+        ) : isSynthsTab ? (
+          <SynthsTab
+            filteredSynths={filteredSynths}
+            selectedSynth={state.selectedSynth}
+            engineState={synthEngineState}
+            loadingSynthdef={loadingSynthdef}
+            isPlaying={synthIsPlaying}
+            params={state.synthParams}
+            rootNote={state.synthRootNote}
+            octave={state.synthOctave}
+            onSynthClick={handleSynthClick}
+            onParamChange={handleSynthParamChange}
+            onRootNoteChange={handleSynthRootNoteChange}
+            onOctaveChange={handleSynthOctaveChange}
+            onCopy={handleCopy}
+          />
         ) : (
           <ScalesTab
             scales={filteredScales}
@@ -552,7 +715,7 @@ function App() {
         )}
       </div>
 
-      {!isFxTab && (
+      {!isFxTab && !isSynthsTab && (
         <BottomPanel
           showRate={isSamplesTab}
           rate={state.rate}
