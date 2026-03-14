@@ -1374,4 +1374,74 @@ kbd {
   .control-group {
     flex-shrink: 0;
   }
+
+  /* ── Synth+FX tab: stack vertically ── */
+
+  /* Body becomes a single column */
+  .synth-fx-body {
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Left column: full width, no fixed height, no side border */
+  .synth-fx-left {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-y: visible;
+  }
+
+  /* Right column: full width */
+  .synth-fx-right {
+    overflow-y: visible;
+  }
+
+  /* Add FX button: full width, taller tap target */
+  .synth-fx-add-btn {
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    font-size: 12px;
+  }
+
+  /* "No FX added" placeholder: centered */
+  .synth-fx-empty {
+    text-align: center;
+    padding: 24px 8px;
+  }
+
+  /* Bottom panel: hide copy button, let snippet wrap */
+  .synth-fx-copy-btn {
+    display: none;
+  }
+
+  .synth-fx-snippet {
+    white-space: pre-wrap;
+    overflow-x: visible;
+  }
+
+  /* Pills (Note, Octave): minimum 36px tap height */
+  .synth-fx-pill {
+    min-height: 36px;
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Sliders: ensure full available width */
+  .synth-fx-slider {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Tools tab pills: minimum 36px tap height */
+  .tools-pill {
+    min-height: 36px;
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
