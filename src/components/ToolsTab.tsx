@@ -463,11 +463,12 @@ function LoopSync() {
 
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const playerRef = useRef<Player | null>(null)
-  // Always-current ref so the onload callback uses the latest rate value
-  const rateRef = useRef<number>(1)
+  const cancelRef = useRef<(() => void) | null>(null)
 
   // Dispose the player and clear state
   const stopPreview = useCallback(() => {
+    cancelRef.current?.()
+    cancelRef.current = null
     if (playerRef.current) {
       playerRef.current.stop()
       playerRef.current.dispose()
@@ -482,7 +483,6 @@ function LoopSync() {
     const loop = ALL_LOOPS.find((l) => l.name === playingName)
     if (!loop) return
     const newRate = calcRate(loop, targetBpm, beats)
-    rateRef.current = newRate
     if (playerRef.current.loaded) {
       playerRef.current.playbackRate = newRate
     }
@@ -492,6 +492,7 @@ function LoopSync() {
   useEffect(() => {
     return () => {
       if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current)
+      cancelRef.current?.()
       if (playerRef.current) { playerRef.current.stop(); playerRef.current.dispose() }
     }
   }, [])
@@ -499,28 +500,26 @@ function LoopSync() {
   const handlePreview = useCallback((loop: LoopInfo, rate: number, e: React.MouseEvent) => {
     e.stopPropagation()
 
-    // Toggle off if same row
-    if (playingName === loop.name) {
-      stopPreview()
-      return
-    }
+    // Unlock AudioContext synchronously while inside the user gesture
+    void toneStart()
 
-    // Stop any current player before creating a new one
-    if (playerRef.current) {
-      playerRef.current.stop()
-      playerRef.current.dispose()
-      playerRef.current = null
-    }
-    setPlayingName(null)
+    // stopPreview unconditionally cancels any in-flight load and disposes current player
+    stopPreview()
 
-    rateRef.current = rate
+    // Toggle off if same row was playing
+    if (playingName === loop.name) return
+
+    let cancelled = false
+    cancelRef.current = () => { cancelled = true }
+
     const url = `${import.meta.env.BASE_URL}samples/${loop.name}.flac`
     const player = new Player({
       url,
       loop: true,
       onload: () => {
-        player.playbackRate = rateRef.current
-        void toneStart().then(() => { player.start() })
+        if (cancelled) return
+        player.playbackRate = rate
+        player.start()
       },
     }).toDestination()
 
