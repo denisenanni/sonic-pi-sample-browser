@@ -15,7 +15,7 @@ import type { Chord } from './data/chords'
 import { FX_LIST, FX_PREVIEW_SAMPLES } from './data/fx'
 import type { FxDefinition } from './data/fx'
 import { SYNTHS, noteToMidi } from './data/synths'
-import type { NoteName } from './data/synths'
+import type { SynthDefinition, NoteName } from './data/synths'
 import { Topbar } from './components/Topbar'
 import { Sidebar } from './components/Sidebar'
 import { SampleGrid } from './components/SampleGrid'
@@ -183,7 +183,6 @@ function App() {
     }
     if (prev === 'synths' && next !== 'synths') {
       stopAll()
-      setSynthIsPlaying(false)
       if (synthPlayingTimerRef.current !== null) {
         clearTimeout(synthPlayingTimerRef.current)
         synthPlayingTimerRef.current = null
@@ -298,6 +297,9 @@ function App() {
   }, [])
 
   const handleTabChange = useCallback((tab: ActiveTab) => {
+    if (tab !== 'synths') {
+      setSynthIsPlaying(false)
+    }
     setState((s) => ({ ...s, activeTab: tab }))
   }, [])
 
