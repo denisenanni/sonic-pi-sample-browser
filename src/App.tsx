@@ -615,7 +615,9 @@ function App() {
         ? state.fxSearch
         : isSynthsTab
           ? state.synthsSearch
-          : state.scalesSearch
+          : isToolsTab
+            ? ''
+            : state.scalesSearch
 
   const activeSnippet = isSamplesTab
     ? samplesSnippet

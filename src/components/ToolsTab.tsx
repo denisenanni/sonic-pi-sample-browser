@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -83,6 +83,7 @@ function buildNoteTable(): NoteRow[] {
 }
 
 const ALL_NOTES: NoteRow[] = buildNoteTable()
+const OCTAVES = [0, 1, 2, 3, 4, 5, 6, 7, 8] as const
 
 function formatSleep(n: number): string {
   // Up to 4 decimal places, trimming trailing zeros
@@ -111,6 +112,15 @@ function BpmCalculator({ bpm, onBpmChange }: BpmCalculatorProps) {
   const [sleepInput, setSleepInput] = useState<string>('0.5')
   const [copiedA, setCopiedA] = useState(false)
   const [copiedB, setCopiedB] = useState(false)
+  const copyTimerARef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const copyTimerBRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerARef.current !== null) clearTimeout(copyTimerARef.current)
+      if (copyTimerBRef.current !== null) clearTimeout(copyTimerBRef.current)
+    }
+  }, [])
 
   // Mode A derived values
   const modeABeats = useMemo<number>(() => {
@@ -122,7 +132,8 @@ function BpmCalculator({ bpm, onBpmChange }: BpmCalculatorProps) {
   }, [selectedDuration, customBeats])
 
   const modeASleep = useMemo(() => calcSleep(bpm, modeABeats), [bpm, modeABeats])
-  const modeASeconds = useMemo(() => (modeASleep * 60) / bpm, [bpm, modeASleep])
+  // calcSleep already returns wall-clock seconds — no second BPM division needed
+  const modeASeconds = modeASleep
   const modeASnippet = `use_bpm ${bpm}\nsleep ${formatSleep(modeASleep)}`
 
   // Mode B derived values
@@ -137,14 +148,16 @@ function BpmCalculator({ bpm, onBpmChange }: BpmCalculatorProps) {
   const handleCopyA = useCallback(() => {
     void copyToClipboard(modeASnippet).then(() => {
       setCopiedA(true)
-      setTimeout(() => setCopiedA(false), 1200)
+      if (copyTimerARef.current !== null) clearTimeout(copyTimerARef.current)
+      copyTimerARef.current = setTimeout(() => setCopiedA(false), 1200)
     })
   }, [modeASnippet])
 
   const handleCopyB = useCallback(() => {
     void copyToClipboard(modeBSnippet).then(() => {
       setCopiedB(true)
-      setTimeout(() => setCopiedB(false), 1200)
+      if (copyTimerBRef.current !== null) clearTimeout(copyTimerBRef.current)
+      copyTimerBRef.current = setTimeout(() => setCopiedB(false), 1200)
     })
   }, [modeBSnippet])
 
@@ -279,7 +292,7 @@ function BpmCalculator({ bpm, onBpmChange }: BpmCalculatorProps) {
           <tbody>
             {RHYTHMIC_VALUES.map((rv) => {
               const sl = calcSleep(bpm, rv.beats)
-              const secs = (sl * 60) / bpm
+              const secs = sl
               return (
                 <tr key={rv.label}>
                   <td>{rv.label} note</td>
@@ -303,6 +316,11 @@ function NoteReference() {
   const [search, setSearch] = useState('')
   const [highlightedMidi, setHighlightedMidi] = useState<number | null>(null)
   const [copiedMidi, setCopiedMidi] = useState<number | null>(null)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => { if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current) }
+  }, [])
 
   const displayedNotes = useMemo<NoteRow[]>(() => {
     const q = search.trim().toLowerCase().replace(/^:/, '')
@@ -314,24 +332,25 @@ function NoteReference() {
     // Filter by name (without colon), alias (without colon), MIDI, or frequency
     return ALL_NOTES.filter((n) => {
       const nameNoColon = n.name.slice(1)
-      const aliasNoColon = n.alias.slice(1)
       if (nameNoColon.includes(q)) return true
-      if (aliasNoColon.includes(q)) return true
+      if (n.alias && n.alias.slice(1).includes(q)) return true
       if (String(n.midi).includes(q)) return true
       if (formatFreq(n.freq).includes(q)) return true
       return false
     })
   }, [search, octave])
 
-  const highlighted = highlightedMidi !== null
-    ? ALL_NOTES.find((n) => n.midi === highlightedMidi) ?? null
-    : null
+  const highlighted = useMemo(
+    () => highlightedMidi !== null ? ALL_NOTES.find((n) => n.midi === highlightedMidi) ?? null : null,
+    [highlightedMidi],
+  )
 
   const handleCopyRow = useCallback((row: NoteRow) => {
     const snippet = `play ${row.name}`
     void copyToClipboard(snippet).then(() => {
       setCopiedMidi(row.midi)
-      setTimeout(() => setCopiedMidi(null), 1200)
+      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopiedMidi(null), 1200)
     })
   }, [])
 
@@ -347,7 +366,7 @@ function NoteReference() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <div className="tools-pill-group">
-          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((o) => (
+          {OCTAVES.map((o) => (
             <button
               key={o}
               className={`tools-pill${octave === o && search === '' ? ' active' : ''}`}
