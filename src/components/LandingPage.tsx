@@ -1,61 +1,64 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from "react";
+import { Link } from "react-router-dom";
 
 interface FeatureCard {
-  icon: string
-  title: string
-  description: string
+  icon: string;
+  title: string;
+  description: string;
 }
 
 const FEATURE_CARDS: FeatureCard[] = [
   {
-    icon: '♪',
-    title: 'Samples',
-    description: 'Preview all 196 built-in samples with rate and amplitude control.',
+    icon: "♪",
+    title: "Samples",
+    description:
+      "Preview all 196 built-in samples with rate and amplitude control.",
   },
   {
-    icon: '∿',
-    title: 'Synths',
-    description: 'Hear real Sonic Pi synths powered by scsynth running in the browser.',
+    icon: "∿",
+    title: "Synths",
+    description:
+      "Hear real Sonic Pi synths powered by scsynth running in the browser.",
   },
   {
-    icon: '⌗',
-    title: 'FX + Chords + Scales',
-    description: 'Explore effects chains, chord voicings, and all 130+ scales.',
+    icon: "⌗",
+    title: "FX + Chords + Scales",
+    description: "Explore effects chains, chord voicings, and all 130+ scales.",
   },
   {
-    icon: '⊞',
-    title: 'Tools',
-    description: 'BPM calculator, note reference, and loop sync calculator.',
+    icon: "⊞",
+    title: "Tools",
+    description: "BPM calculator, note reference, and loop sync calculator.",
   },
-]
+];
 
 export function LandingPage() {
-  const [email, setEmail] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
   const handleNotify = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (email.trim()) setSubmitted(true)
-  }
+    e.preventDefault();
+    if (email.trim()) setSubmitted(true);
+  };
 
   return (
     <div className="landing">
-
       {/* ── Section 1: Hero ────────────────────────────────── */}
       <section className="landing-hero">
         <div className="landing-hero-bg" aria-hidden="true" />
         <div className="landing-hero-content">
-          <div className="landing-logo" aria-hidden="true">π</div>
+          <div className="landing-logo" aria-hidden="true">
+            π
+          </div>
           <h1 className="landing-title">Pi Studio</h1>
-          <p className="landing-tagline">Explore, learn, create with Sonic Pi.</p>
+          <p className="landing-tagline">
+            Explore, learn, create with Sonic Pi.
+          </p>
           <div className="landing-cta-row">
             <Link className="landing-btn-primary" to="/browser">
               Open Browser →
             </Link>
-            <span className="landing-btn-disabled">
-              Studio — coming soon
-            </span>
+            <span className="landing-btn-disabled">Studio — coming soon</span>
           </div>
         </div>
       </section>
@@ -67,7 +70,7 @@ export function LandingPage() {
           <br />
           It lets you compose and perform music using simple Ruby code —
           <br />
-          live, in real time.{' '}
+          live, in real time.{" "}
           <a
             className="landing-link"
             href="https://sonic-pi.net"
@@ -87,7 +90,9 @@ export function LandingPage() {
         <div className="landing-cards">
           {FEATURE_CARDS.map((card) => (
             <div className="landing-card" key={card.title}>
-              <span className="landing-card-icon" aria-hidden="true">{card.icon}</span>
+              <span className="landing-card-icon" aria-hidden="true">
+                {card.icon}
+              </span>
               <h3 className="landing-card-title">{card.title}</h3>
               <p className="landing-card-desc">{card.description}</p>
             </div>
@@ -110,9 +115,12 @@ export function LandingPage() {
         <p className="landing-studio-desc">
           Compose live loops, chain synths and FX, arrange patterns —
           <br />
-          then export a ready-to-run <code>.rb</code> file directly into Sonic Pi.
+          then export a ready-to-run <code>.rb</code> file directly into Sonic
+          Pi.
         </p>
-        <p className="landing-studio-hook">→ No more looking up syntax. Just make music.</p>
+        <p className="landing-studio-hook">
+          → No more looking up syntax. Just make music.
+        </p>
 
         {submitted ? (
           <p className="landing-notify-thanks">Thanks! We'll let you know.</p>
@@ -137,7 +145,7 @@ export function LandingPage() {
       {/* ── Section 5: Footer ─────────────────────────────── */}
       <footer className="landing-footer">
         <p className="landing-footer-text">
-          Pi Studio — built with React, Tone.js and{' '}
+          Pi Studio — built with React, Tone.js and{" "}
           <a
             className="landing-link"
             href="https://github.com/sonic-pi-net/sonic-pi/tree/dev/app/javascript/pi-time"
@@ -146,7 +154,10 @@ export function LandingPage() {
           >
             SuperSonic
           </a>
-          {' '}by Sam Aaron
+        </p>
+        <p className="landing-footer-text">
+          Synths powered by SuperSonic — scsynth in the browser by Sam
+          Aaron{" "}
         </p>
         <nav className="landing-footer-links" aria-label="External links">
           <a
@@ -175,7 +186,6 @@ export function LandingPage() {
           </a>
         </nav>
       </footer>
-
     </div>
-  )
+  );
 }
